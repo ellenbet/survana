@@ -1,2 +1,0 @@
-POSTGRES_DB_PASSWORD = "mypassword"
-DATABASE_URL = "postgresql://myuser:" + POSTGRES_DB_PASSWORD + "@localhost:5432/mydatabase"
