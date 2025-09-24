@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Todo List</title>
+</head>
+<body>
+    <h1>Todo List</h1>
+    <input type="text" id="newItem" placeholder="Enter a new item">
+    <button onclick="addItem()">Add</button>
+    <ul id="todoList"></ul>
+
+    <script>
+        const API_URL = 'http://localhost:8000';
+
+        async function fetchTodos() {
+            const response = await fetch(`${API_URL}/todos`);
+            const todos = await response.json();
+            const list = document.getElementById('todoList');
+            list.innerHTML = '';
+            todos.forEach(todo => {
+                const li = document.createElement('li');
+                li.textContent = todo.content;
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = 'Delete';
+                deleteBtn.onclick = () => deleteItem(todo._id);
+                li.appendChild(deleteBtn);
+                list.appendChild(li);
+            });
+        }
+
+        async function addItem() {
+            const input = document.getElementById('newItem');
+            if (input.value.trim() !== '') {
+                const response = await fetch(`${API_URL}/todos`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ content: input.value }),
+                });
+                if (response.ok) {
+                    input.value = '';
+                    fetchTodos();
+                }
+            }
+        }
+
+        async function deleteItem(id) {
+            const response = await fetch(`${API_URL}/todos/${id}`, {
+                method: 'DELETE',
+            });
+            if (response.ok) {
+                fetchTodos();
+            }
+        }
+
+        fetchTodos();
+    </script>
+</body>
+</html>
