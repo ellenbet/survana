@@ -12,9 +12,9 @@ dependencies = [
     "mlflow>=3.3.2",
     "optuna>=4.5.0",
     "pathlib>=1.0.1",
+    "pre-commit>=4.3.0",
     "psycopg2-binary>=2.9.10",
     "scikit-learn>=1.7.1",
     "sqlalchemy>=2.0.43",
     "xgboost>=3.0.5",
 ]
-
