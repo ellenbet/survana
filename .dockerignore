@@ -1,0 +1,8 @@
+# Exclude all files with a .log extension
+*.log
+
+# Exclude a specific directory
+data/
+
+# Exclude the .git directory
+.git/
