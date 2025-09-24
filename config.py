@@ -15,6 +15,7 @@ logger: logging.Logger = logging.getLogger("config")
 
 BASE_DIR: Path = Path(os.getenv("BASE_DIR", "survana"))
 DATA_PATH: Path = BASE_DIR / "data"
+PREFILTERED_DATA_PATH: Path = DATA_PATH / "stand_knn_features_variance1000.tsv"
 SRC_PATH: Path = BASE_DIR / "src"
 
 paths: list[Path] = [BASE_DIR, DATA_PATH, SRC_PATH]
