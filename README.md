@@ -1,6 +1,6 @@
 ### Biomarker and survival analysis software for thesis.
 
-<img width="1024" height="1536" alt="image" src="https://github.com/user-attachments/assets/6bebe705-bbea-4dfd-a193-0d1f2fe63c58" />
+<img width="562" height="768" alt="image" src="https://github.com/user-attachments/assets/6bebe705-bbea-4dfd-a193-0d1f2fe63c58" />
 
 How to use and build:
 1. Clone repo
