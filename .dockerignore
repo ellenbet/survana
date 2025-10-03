@@ -3,6 +3,7 @@
 
 # Exclude a specific directory
 data/
+jupyter_explorations/
 
 # Exclude the .git directory
 .git/
