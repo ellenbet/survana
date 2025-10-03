@@ -23,6 +23,9 @@ from tuning.optuna_objectives import sksurv_objective_with_args
 # from data_processing.datamergers import merge_features_with_clinical_data
 
 
+# child parent info
+# https://mlflow.org/docs/latest/
+# ml/traditional-ml/tutorials/hyperparameter-tuning/part1-child-runs/ ,
 def coxph() -> None:
     today = date.today()
     logging.basicConfig(
@@ -46,10 +49,10 @@ def coxph() -> None:
         + str(round(sksurv_data.censored_patient_percentage, 2))
     )
 
+    ident = mlflow.create_experiment(f"coxph_parentrun_{str(date.today())}")
+
     # parent run
-    with mlflow.start_run(
-        experiment_id=mlflow.create_experiment("coxph"), nested=True
-    ):
+    with mlflow.start_run(experiment_id=ident):
         SKF_SPLITS = 5
         RSKF_SPLITS = 5
         RSKF_REPEATS = 3
