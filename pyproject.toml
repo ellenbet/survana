@@ -23,6 +23,3 @@ dependencies = [
     "sqlalchemy>=2.0.43",
     "xgboost>=3.0.5",
 ]
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"  # Accepts: "google", "numpy", or "pep257".
