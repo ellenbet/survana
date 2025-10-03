@@ -29,7 +29,7 @@ def load_data_for_sksurv_coxnet(
     """
     data: pd.DataFrame = pd.read_csv(path, sep=separator)
     X: pd.DataFrame = data.iloc[:, 2:-2]
-    y: np.recarray[tuple[Any, ...], np.dtype[Any]] = data.iloc[
+    y: np.recarray[tuple[Any, ...], np.dtype[np.float64]] = data.iloc[
         :, -2:
     ].to_records(
         index=False,

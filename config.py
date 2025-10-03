@@ -29,6 +29,10 @@ paths: list[Path] = [
     RESULT_FIGURES_DATA_PATH,
 ]
 
+CENSOR_STATUS: str = "RFS_STATUS"
+MONTHS_BEFORE_EVENT: str = "RFS_MONTHS"
+P_ID = "PATIENT_ID"
+
 # Printing config overview
 logging.info(
     "\nDEFINED PROJECT PATHS:\n" + "\n".join([str(path) for path in paths])

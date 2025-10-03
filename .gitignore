@@ -419,6 +419,8 @@ FodyWeavers.xsd
 *.msp
 
 # Project specific ignores
+mlruns/
 data/
+jupyter_explorations/
 .venv/
 .mypy_cache/
