@@ -10,8 +10,10 @@ from sklearn.exceptions import FitFailedWarning
 from sklearn.model_selection import GridSearchCV, KFold, train_test_split
 from sklearn.pipeline import Pipeline, make_pipeline
 
-from config import PREFILTERED_DATA_PATH
-from dataloaders import load_data_for_sksurv_coxnet
+from data_processing.dataloaders import load_data_for_sksurv_coxnet
+from data_processing.datamergers import merge_features_with_clinical_data
+
+from ..config import CLINICAL_DATA_PATH, PREFILTERED_DATA_PATH
 
 SEED: int = 42
 logging.basicConfig(
@@ -32,9 +34,8 @@ data_collection: tuple[
 )
 
 
-data: pd.DataFrame = data_collection[0]  # Full dataframe
-X: pd.DataFrame = data_collection[1]  # Just designmatrix
-# Response variable, array with dim n (patients) x 2
+data: pd.DataFrame = data_collection[0]
+X: pd.DataFrame = data_collection[1]
 y: np.recarray[tuple[Any, ...], np.dtype[Any]] = data_collection[2]
 
 
@@ -173,147 +174,21 @@ Kaplan Meyer plot based on best coefficients
 
 """
 
-
-def merge_data(other_tsv, clinical_tsv, merge_on="PATIENT_ID"):
-    data1 = pd.read_csv(
-        clinical_tsv, sep="\t", skiprows=4
-    )  # the clinical file has 5 rows with non-df data
-    data1["PATIENT_ID"] = data1["PATIENT_ID"].str.replace(
-        "-", "_"
-    )  # the clinical file has - instead of _ to separate patient ids
-    data2 = pd.read_csv(other_tsv, sep="\t")
-    merged = data1.merge(data2, how="inner", on=merge_on)
-    return merged
-
-
-merged_df = merge_data(
-    "../data/stand_knn_features_variance1000.tsv",
-    "../data/data_clinical_patient.txt",
+merge_criteria = "PATIENT_ID"
+merged_df: pd.DataFrame = merge_features_with_clinical_data(
+    str(PREFILTERED_DATA_PATH),
+    str(CLINICAL_DATA_PATH),
+    merge_on=merge_criteria,
 )
-X["PATIENT_ID"] = data["PATIENT_ID"]
+
+X[merge_criteria] = data[merge_criteria]
+
 assert (
-    X["PATIENT_ID"].all() == merged_df["PATIENT_ID"].all()
+    X[merge_criteria].all() == merged_df[merge_criteria].all()
 ), "not able to sort X by merged due to mismatch of patient id order"
-
-"""
-Option to select a filter found in clinical data,
-such as claudin subtype (LumA, LumB, etc..)
-
-
-# decide on filtering factor:
-filter = "CLAUDIN_SUBTYPE"
-assert filter in merged_df.columns, "WARNING: not found in merged df columns"
-
-# encoding legend handles to get static color
-X[filter] = merged_df[filter]
-X.sort_values(by = filter, inplace = True)
-subtypes = set(X[filter])
-subtypes = list(subtypes)
-encoder = {}
-for ind in range(len(subtypes)):
-    encoder[subtypes[ind]] = ind
-
-
-Fitting tbased on the best params
-
-Is this actually not a bit weird because we have all of our coefficients,
-perhaps better to just fit based on those?
-
-
-
-coxnet_pred = make_pipeline(lm.CoxnetSurvivalAnalysis(l1_ratio=0.99,
-fit_baseline_model=True))
-coxnet_pred.set_params(**gcv.best_params_)
-fit_X = X.drop(["PATIENT_ID", filter], axis = 1)
-coxnet_pred.fit(fit_X , y)
-surv_fns = coxnet_pred.predict_survival_function(fit_X)
-
-
-Plotting
-
-
-
-time_points = np.quantile(y["RFS_MONTHS"], np.linspace(0, 0.6, 100))
-legend_handles = []
-legend_labels = []
-_, ax = plt.subplots(figsize=(9, 6))
-
-for fn, label in zip(surv_fns, X.loc[:, filter].astype(str)):
-    (line,) = ax.step(time_points, fn(time_points), where="post",
-    color=f"C{encoder[label]}", alpha=0.5)
-    if label not in legend_labels:
-        legend_labels.append(label)
-        legend_handles.append(line)
-
-ax.legend(legend_handles, legend_labels)
-ax.set_xlabel("time")
-ax.set_ylabel("Survival probability")
-ax.grid(True)
-plt.title(f"Kaplan Meier with best coefficients, filtered by {filter}")
-#plt.show()
-"""
 
 
 merged_df["risk_score"] = X.drop(["PATIENT_ID"], axis=1) @ estimator.coef_
 merged_df["binary_risk"] = (
     merged_df["risk_score"] > np.median(merged_df["risk_score"])
 ).astype(int)
-
-"""
-# decide on filtering factor:
-filter = "binary_risk"
-assert (
-    filter in merged_df.columns
-), "WARNING: suggested filter not found in merged df columns"
-
-# encoding legend handles to get static color
-X[filter] = merged_df[filter]
-X.sort_values(by=filter, inplace=True)
-subtypes: set[Any] = set(X[filter])
-subtypes = [str(subtype) for subtype in subtypes]
-encoder = {}
-for ind in range(len(subtypes)):
-    encoder[subtypes[ind]] = ind
-
-
-Fitting tbased on the best params
-
-Is this actually not a bit weird because we have all of our coefficients,
-perhaps better to just fit based on those?
-
-
-
-coxnet_pred = make_pipeline(
-    lm.CoxnetSurvivalAnalysis(l1_ratio=1, fit_baseline_model=True)
-)
-coxnet_pred.set_params(**gcv.best_params_)
-fit_X = X.drop(["PATIENT_ID", filter], axis=1)
-coxnet_pred.fit(fit_X, y)
-surv_fns = coxnet_pred.predict_survival_function(fit_X)
-
-
-
-time_points = np.quantile(y["RFS_MONTHS"], np.linspace(0, 0.6, 100))
-legend_handles = []
-legend_labels = []
-_, ax = plt.subplots(figsize=(9, 6))
-
-for fn, label in zip(surv_fns, X.loc[:, filter].astype(str)):
-    (line,) = ax.step(
-        time_points,
-        fn(time_points),
-        where="post",
-        color=f"C{encoder[label]}",
-        alpha=0.5,
-    )
-    if label not in legend_labels:
-        legend_labels.append(label)
-        legend_handles.append(line)
-
-ax.legend(legend_handles, legend_labels)
-ax.set_xlabel("time (months)")
-ax.set_ylabel("Survival probability")
-ax.grid(True)
-plt.title(f"filtered by {filter}")
-plt.show()
-"""

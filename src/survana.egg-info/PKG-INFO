@@ -1,0 +1,35 @@
+Metadata-Version: 2.4
+Name: survana
+Version: 0
+Summary: Biomarker and survival analysis software for thesis.
+License-Expression: AGPL-3.0-or-later
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: dotenv>=0.9.9
+Requires-Dist: dotenvx>=0.0.0
+Requires-Dist: fastapi>=0.116.1
+Requires-Dist: mkdocs>=1.6.1
+Requires-Dist: mlflow>=3.3.2
+Requires-Dist: mypy>=1.18.2
+Requires-Dist: optuna>=4.5.0
+Requires-Dist: pandas-stubs>=2.3.2.250827
+Requires-Dist: pathlib>=1.0.1
+Requires-Dist: pre-commit>=4.3.0
+Requires-Dist: psycopg2-binary>=2.9.10
+Requires-Dist: scikit-learn>=1.7.1
+Requires-Dist: scikit-survival>=0.25.0
+Requires-Dist: sqlalchemy>=2.0.43
+Requires-Dist: xgboost>=3.0.5
+Dynamic: license-file
+
+# Survival analysis and Biomarker discovery
+
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/0ed3e16c-3415-49f0-b339-d4de0ca665a8" />
+
+How to use and build:
+1. Clone repo
+2. Run ``uv sync`` in terminal
+3. Run ``pre-commit install`` in terminal
+4. Make sure to have some helpful extensions installed: mypy, isort, black, flake8
+5. Play around (test2)

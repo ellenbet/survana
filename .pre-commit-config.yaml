@@ -17,6 +17,7 @@ repos:
     rev: 5.13.2
     hooks:
     -   id: isort
+        args: ["--profile", "black", "--filter-files"]
 # Checks code compliance according to PEP8
 -   repo: https://github.com/pycqa/flake8
     rev: 7.0.0
