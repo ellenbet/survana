@@ -9,29 +9,31 @@ import optuna
 import pandas as pd
 import sksurv.linear_model as lm
 from matplotlib import pyplot as plt
+from mlflow.entities.experiment import Experiment
 
 from config import (
     CENSOR_STATUS,
+    COXPH_EXPERIMENT_ID,
     MONTHS_BEFORE_EVENT,
     PREFILTERED_DATA_PATH,
     RESULT_FIGURES_DATA_PATH,
 )
 from data_processing.data_models import SksurvData
 from data_processing.dataloaders import load_data_for_sksurv_coxnet
-from tuning.optuna_objectives import sksurv_objective_with_args
+from tuning.optuna_objectives import mlflow_sksurv_objective_with_args
 
-# from data_processing.datamergers import merge_features_with_clinical_data
+SKF_SPLITS = 2
+RSKF_SPLITS = 2
+RSKF_REPEATS = 1
+N_TRIALS = 1
 
 
-# child parent info
-# https://mlflow.org/docs/latest/
-# ml/traditional-ml/tutorials/hyperparameter-tuning/part1-child-runs/ ,
 def coxph() -> None:
-    today = date.today()
+    today: date = date.today()
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
     )
-    logger: logging.Logger = logging.getLogger("CoxNet")
+    logger: logging.Logger = logging.getLogger(__name__)
 
     logger.info(f"\n\nRetrieving data from path {PREFILTERED_DATA_PATH}")
 
@@ -49,14 +51,24 @@ def coxph() -> None:
         + str(round(sksurv_data.censored_patient_percentage, 2))
     )
 
-    ident = mlflow.create_experiment(f"coxph_parentrun_{str(date.today())}")
+    experiment: Experiment | None = mlflow.get_experiment_by_name(
+        COXPH_EXPERIMENT_ID
+    )
+    assert (
+        experiment is not None
+    ), f"no data found on experiment {COXPH_EXPERIMENT_ID}"
+    ident = experiment.experiment_id
+    logger.info(f"\nStarting MLflow with experiment id {ident}")
 
+    outer_fold: int = 0
     # parent run
-    with mlflow.start_run(experiment_id=ident):
-        SKF_SPLITS = 5
-        RSKF_SPLITS = 5
-        RSKF_REPEATS = 3
-        N_TRIALS = 5
+    with mlflow.start_run(
+        experiment_id=ident,
+        run_name=str(today)
+        + "_"
+        + COXPH_EXPERIMENT_ID
+        + f"_parent_{outer_fold}",
+    ):
 
         outer_best_param: list[float] = [0.0] * SKF_SPLITS
         outer_best_score: list[float] = [0.0] * SKF_SPLITS
@@ -64,11 +76,13 @@ def coxph() -> None:
             sksurv_data.stratified_kfold_splits(n_splits=SKF_SPLITS)
         ):
             wrapped_objective: partial[float | Any] = partial(
-                sksurv_objective_with_args,
+                mlflow_sksurv_objective_with_args,
                 sksurv_data=sksurv_data,
                 outer_train_ind=outer_train_ind,
                 rskf_repeats=RSKF_REPEATS,
                 rskf_splits=RSKF_SPLITS,
+                run_name=str(today) + "_child_outer_fold_" + str(outer_fold),
+                experiment_id=ident,
             )
             study: optuna.Study = optuna.create_study(direction="maximize")
             study.optimize(wrapped_objective, n_trials=N_TRIALS)
@@ -94,22 +108,34 @@ def coxph() -> None:
                 y=sksurv_data.y[outer_test_ind],
             )
             outer_best_score[outer_fold] = outer_score
-            mlflow.log_metric("outer cv best c-index", study.best_value)
-            mlflow.log_params(study.best_params)
+            mlflow.log_metric("outer best c-index", study.best_value)
+            # mlflow.log_param("outer best lambda", study.best_params["lambda"
+            # ])
+            # mlflow.log_params(
+            #    "model", sksurv_data.get_best_features(model.coef_)
+            # )
 
-        best = max(outer_best_score)
+        best: float = max(outer_best_score)
         mlflow.log_metric("total best c-index", best)
         mlflow.log_param(
-            "total lambda", outer_best_param[outer_best_score.index(best)]
+            "total best lambda", outer_best_param[outer_best_score.index(best)]
         )
+        mlflow.log_param("mean c-index", float(np.mean(outer_score)))
+
         plt.legend()
         plt.show()
-        plt.savefig(
+
+        filename: str = (
             str(RESULT_FIGURES_DATA_PATH)
             + "/coxph_convergence_plot_optuna_"
             + str(today)
         )
+        plt.savefig(filename)
+        mlflow.log_artifact(filename)
+        plt.close()
         logger.info(
             f"Best score found at {best} with lambda"
             + f"{outer_best_param[outer_best_score.index(best)]}"
         )
+        # ending run to start new logging session for next cv
+        mlflow.end_run()
