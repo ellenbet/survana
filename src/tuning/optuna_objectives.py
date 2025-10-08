@@ -1,3 +1,4 @@
+import logging
 from typing import Any, Iterator
 
 import mlflow
@@ -6,6 +7,11 @@ import pandas as pd
 import sksurv.linear_model as lm
 
 from data_processing.data_models import SksurvData
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def sksurv_objective_with_args(
@@ -77,18 +83,29 @@ def mlflow_sksurv_objective_with_args(
             n_repeats=rskf_repeats,
             n_splits=rskf_splits,
         )
-        for _, (inner_train_ind, inner_test_ind) in enumerate(inner_split):
-            model.fit(
-                inner_X.iloc[inner_train_ind], y=inner_y[inner_train_ind]
-            )
-            inner_score: float | Any = model.score(
-                inner_X.iloc[inner_test_ind], y=inner_y[inner_test_ind]
-            )
-            nested_scores.append(inner_score)
+        for inner_fold, (inner_train_ind, inner_test_ind) in enumerate(
+            inner_split
+        ):
+            try:
+                model.fit(
+                    inner_X.iloc[inner_train_ind], y=inner_y[inner_train_ind]
+                )
+                inner_score: float | Any = model.score(
+                    inner_X.iloc[inner_test_ind], y=inner_y[inner_test_ind]
+                )
+                nested_scores.append(inner_score)
+            except np.linalg.LinAlgError:
+                logger.error(
+                    "Singular matrix multiplication attempted"
+                    + f"skipping results for inner fold no. {inner_fold}"
+                )
+                pass
 
         score: float = float(np.mean(nested_scores))
         mlflow.log_param("lambda", params["lambda"])
-        mlflow.log_metric("c-index", score)
-        mlflow.log_metric("c-index variance", float(np.var(nested_scores)))
+        mlflow.log_metric("child c-index", score)
+        mlflow.log_metric(
+            "child c-index variance", float(np.var(nested_scores))
+        )
 
     return score

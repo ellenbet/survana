@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime
 from functools import partial
 from typing import Any
 
@@ -22,14 +22,17 @@ from data_processing.data_models import SksurvData
 from data_processing.dataloaders import load_data_for_sksurv_coxnet
 from tuning.optuna_objectives import mlflow_sksurv_objective_with_args
 
-SKF_SPLITS = 2
-RSKF_SPLITS = 2
-RSKF_REPEATS = 1
-N_TRIALS = 1
+SKF_SPLITS = 5
+RSKF_SPLITS = 5
+RSKF_REPEATS = 5
+N_TRIALS = 10
 
 
 def coxph() -> None:
     today: date = date.today()
+    current_datetime: datetime = datetime.now()
+    current_timestamp: float = current_datetime.timestamp()
+
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
     )
@@ -67,7 +70,8 @@ def coxph() -> None:
         run_name=str(today)
         + "_"
         + COXPH_EXPERIMENT_ID
-        + f"_parent_{outer_fold}",
+        + f"_parent_{outer_fold}"
+        + str(current_timestamp)[:5],
     ):
 
         outer_best_param: list[float] = [0.0] * SKF_SPLITS
@@ -99,28 +103,33 @@ def coxph() -> None:
             model = lm.CoxPHSurvivalAnalysis(
                 verbose=True, alpha=best_param, n_iter=100
             )
-            model.fit(
-                sksurv_data.X.iloc[outer_train_ind],
-                y=sksurv_data.y[outer_train_ind],
-            )
-            outer_score: float | Any = model.score(
-                sksurv_data.X.iloc[outer_test_ind],
-                y=sksurv_data.y[outer_test_ind],
-            )
-            outer_best_score[outer_fold] = outer_score
-            mlflow.log_metric("outer best c-index", study.best_value)
-            # mlflow.log_param("outer best lambda", study.best_params["lambda"
-            # ])
-            # mlflow.log_params(
-            #    "model", sksurv_data.get_best_features(model.coef_)
-            # )
+            try:
+                model.fit(
+                    sksurv_data.X.iloc[outer_train_ind],
+                    y=sksurv_data.y[outer_train_ind],
+                )
+                outer_score: float | Any = model.score(
+                    sksurv_data.X.iloc[outer_test_ind],
+                    y=sksurv_data.y[outer_test_ind],
+                )
+                outer_best_score[outer_fold] = outer_score
+            except np.linalg.LinAlgError:
+                logger.error(
+                    "Singular matrix multiplication attempted"
+                    + f"skipping results for outer fold no. {outer_fold}"
+                )
+                pass
 
-        best: float = max(outer_best_score)
-        mlflow.log_metric("total best c-index", best)
-        mlflow.log_param(
-            "total best lambda", outer_best_param[outer_best_score.index(best)]
+        outer_best_score = (
+            [0] if sum(outer_best_score) == 0 else outer_best_score
         )
-        mlflow.log_param("mean c-index", float(np.mean(outer_score)))
+        best: float = max(outer_best_score)
+        mlflow.log_metric("parent best c-index", best)
+        mlflow.log_param(
+            "parent best lambda",
+            outer_best_param[outer_best_score.index(best)],
+        )
+        mlflow.log_metric("parent mean c-index", float(np.mean(outer_score)))
 
         plt.legend()
         plt.show()
@@ -131,10 +140,10 @@ def coxph() -> None:
             + str(today)
         )
         plt.savefig(filename)
-        mlflow.log_artifact(filename)
+        mlflow.log_artifact(filename + ".png")
         plt.close()
         logger.info(
-            f"Best score found at {best} with lambda"
+            f"Best score found at {best} with lambda "
             + f"{outer_best_param[outer_best_score.index(best)]}"
         )
         # ending run to start new logging session for next cv
