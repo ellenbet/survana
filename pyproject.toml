@@ -9,6 +9,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "dotenvx>=0.0.0",
     "fastapi>=0.116.1",
+    "knockpy>=1.3.5",
     "mkdocs>=1.6.1",
     "mlflow>=3.3.2",
     "mypy>=1.18.2",
@@ -17,9 +18,22 @@ dependencies = [
     "pathlib>=1.0.1",
     "pre-commit>=4.3.0",
     "psycopg2-binary>=2.9.10",
+    "pytest>=9.0.0",
     "ruff>=0.13.3",
     "scikit-learn>=1.7.1",
     "scikit-survival>=0.25.0",
+    "seaborn>=0.13.2",
     "sqlalchemy>=2.0.43",
     "xgboost>=3.0.5",
 ]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.1.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/survana"]
+
+[tool.hatch.build]
+include = ["src/survana/py.typed"]

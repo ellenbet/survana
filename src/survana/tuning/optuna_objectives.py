@@ -5,7 +5,6 @@ import mlflow
 import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
-
 from data_processing.data_models import SksurvData
 
 logging.basicConfig(
