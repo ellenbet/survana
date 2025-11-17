@@ -12,6 +12,54 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 class SksurvData(BaseModel):
+    """Container for survival-analysis data and related utilities.
+
+    This class stores three main inputs:
+      - a pandas DataFrame containing raw data,
+      - a pandas DataFrame containing the design matrix (features),
+      - a NumPy structured recarray containing the survival response
+        (event indicator + time).
+
+    Upon initialization, the model computes several derived attributes,
+    including `data`, `X`, `y`, `censored_patients_percentage`,
+    `y_censored`, and `y_survival`.
+
+    The class also provides convenience methods for generating
+    stratified cross-validation split iterators, including standard
+    `StratifiedKFold` and `RepeatedStratifiedKFold`. Additionally,
+    it provides a utility to extract the most influential features
+    from model coefficients.
+
+    Attributes:
+        data (pd.DataFrame):
+            Raw dataset used for analysis.
+        X (pd.DataFrame):
+            Design matrix of predictor variables.
+        y (np.recarray):
+            Structured survival response array
+            (event indicator and survival time).
+        y_censored (np.ndarray):
+            Boolean array indicating censoring status
+            (0 = event occurred, 1 = censored).
+        y_survival (np.ndarray):
+            Array of survival times.
+        censored_patients_percentage (float):
+            Proportion of samples that are censored.
+
+    Methods:
+        stratified_kfold_splits(X=None, y=None, n_splits=5, random_state=None,
+        shuffle=False):
+            Creates a `StratifiedKFold` iterator using either instance data
+            or the provided `X` and `y`.
+        stratified_repeated_kfold_splits(X=None, y=None, n_repeats=2,
+        n_splits=5, random_state=None):
+            Creates a `RepeatedStratifiedKFold` iterator using either
+            instance data or the provided `X` and `y`.
+        get_best_features(all_coefs):
+            Returns a dictionary containing the highest-magnitude model
+            coefficients and their corresponding feature names.
+    """
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
     data_collection: tuple[
         pd.DataFrame, pd.DataFrame, np.recarray[tuple[Any, ...], np.dtype[Any]]
@@ -131,6 +179,8 @@ class SksurvData(BaseModel):
                     + f" y with shape {y_cens.shape[0]}"
                 )
             return rskf.split(X, y_cens)  # type: ignore
+
+    # TODO add MC CV method
 
     def get_best_features(
         self, all_coefs: np.ndarray
