@@ -17,6 +17,7 @@ from tuning.optuna_objectives import mlflow_sksurv_objective_with_args
 from config import (
     CENSOR_STATUS,
     COXPH_EXPERIMENT_ID,
+    COXPH_NON_NESTED_EXPERIMENT_ID,
     MONTHS_BEFORE_EVENT,
     PREFILTERED_DATA_PATH,
     RESULT_FIGURES_DATA_PATH,
@@ -29,6 +30,7 @@ N_TRIALS = 10
 
 
 def coxph() -> None:
+    """Full model with Sksurv Cox-Lasso, using Optuna and MLFlow"""
     today: date = date.today()
     current_datetime: datetime = datetime.now()
     current_timestamp: float = current_datetime.timestamp()
@@ -146,5 +148,58 @@ def coxph() -> None:
             f"Best score found at {best} with lambda "
             + f"{outer_best_param[outer_best_score.index(best)]}"
         )
+        # ending run to start new logging session for next cv
+        mlflow.end_run()
+
+
+def non_nested_coxph() -> None:
+    """Full model with Sksurv Cox-Lasso, using Optuna and MLFlow,
+    but non-nested"""
+    # TODO FINISH THIS
+    today: date = date.today()
+    current_datetime: datetime = datetime.now()
+    current_timestamp: float = current_datetime.timestamp()
+
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
+    logger: logging.Logger = logging.getLogger(__name__)
+
+    logger.info(f"\n\nRetrieving data from path {PREFILTERED_DATA_PATH}")
+
+    data_collection: tuple[
+        pd.DataFrame, pd.DataFrame, np.recarray[tuple[Any, ...], np.dtype[Any]]
+    ] = load_data_for_sksurv_coxnet(
+        str(PREFILTERED_DATA_PATH),
+        response_variables=(CENSOR_STATUS, MONTHS_BEFORE_EVENT),
+    )
+
+    sksurv_data: SksurvData = SksurvData(data_collection=data_collection)
+
+    logger.info(
+        "\nCensored patients in data: "
+        + str(round(sksurv_data.censored_patient_percentage, 2))
+    )
+
+    experiment: Experiment | None = mlflow.get_experiment_by_name(
+        COXPH_NON_NESTED_EXPERIMENT_ID
+    )
+    assert (
+        experiment is not None
+    ), f"no data found on experiment {COXPH_NON_NESTED_EXPERIMENT_ID}"
+    ident = experiment.experiment_id
+    logger.info(f"\nStarting MLflow with experiment id {ident}")
+
+    outer_fold: int = 0
+    # parent run
+    with mlflow.start_run(
+        experiment_id=ident,
+        run_name=str(today)
+        + "_"
+        + COXPH_EXPERIMENT_ID
+        + f"_parent_{outer_fold}"
+        + str(current_timestamp)[:5],
+    ):
+
         # ending run to start new logging session for next cv
         mlflow.end_run()

@@ -47,12 +47,10 @@ class SksurvData(BaseModel):
             Proportion of samples that are censored.
 
     Methods:
-        stratified_kfold_splits(X=None, y=None, n_splits=5, random_state=None,
-        shuffle=False):
+        stratified_kfold_splits(X, y, n_splits, random_state, shuffle):
             Creates a `StratifiedKFold` iterator using either instance data
             or the provided `X` and `y`.
-        stratified_repeated_kfold_splits(X=None, y=None, n_repeats=2,
-        n_splits=5, random_state=None):
+        stratified_repeated_kfold_splits(X, y, n_repeat, n_splits, random_s):
             Creates a `RepeatedStratifiedKFold` iterator using either
             instance data or the provided `X` and `y`.
         get_best_features(all_coefs):
@@ -109,10 +107,10 @@ class SksurvData(BaseModel):
         either instance variables or argument X and y
 
         Args:
-            X (pd.DataFrame | pd.Series | None, optional): design matrix.
-            Defaults to None.
-            y (np.recarray[tuple[Any, ...], np.dtype[np.float64]]
-            | None, optional): response variable. Defaults to None.
+            X (pd.DataFrame | pd.Series | None, optional):
+                design matrix.Defaults to None.
+            y (np.recarray[tuple[Any, ...], np.dtype[np.float64]] | None):
+                response variable. Defaults to None.
             n_splits (int, optional): amount of split for cv. Defaults to 5.
             random_state (_type_, optional): random state. Defaults to None.
             shuffle (bool): Defaults to False.
@@ -145,10 +143,10 @@ class SksurvData(BaseModel):
         Args:
             X (pd.DataFrame | pd.Series | None, optional): design matrix.
             Defaults to None.
-            y (np.recarray[tuple[Any, ...], np.dtype[np.float64]]
-            | None, optional): response variable. Defaults to None.
-            n_repeats (int, optional): amount of repeats for repeated kfold.
-            Defaults to 2.
+            y (np.recarray[tuple[Any, ...], np.dtype[np.float64]] | None):
+                response variable. Defaults to None.
+            n_repeats (int, optional):
+                amount of repeats for repeated kfold. Defaults to 2.
             n_splits (int, optional): amount of split for cv. Defaults to 5.
             random_state (_type_, optional): random state. Defaults to None.
 
@@ -190,8 +188,8 @@ class SksurvData(BaseModel):
         and values as coefficients
 
         Args:
-            all_coefs (np.ndarray): from model training, expects model.coefs_
-            from Sksurv package
+            all_coefs (np.ndarray):
+                from model training, expects model.coefs_ from Sksurv package
 
         Returns:
             dict[str, np.float64]: keys as feature, value as coef

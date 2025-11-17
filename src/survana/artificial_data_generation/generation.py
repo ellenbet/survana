@@ -10,13 +10,14 @@ class ArtificialGenerator:
     either model x knockoffs or random permutation.
 
     Attributes:
-        - n_artificial_features (int): number of artificial features,
-        has to be less or equal to number of original features
-        - type (ArtificialType): either KNOCKOFF or RANDOM_PERMUTATION
-        - random_state (int): sets random state for generation
+        n_artificial_features (int):
+            number of artificial features,
+            has to be less or equal to number of original features
+        type (ArtificialType): either KNOCKOFF or RANDOM_PERMUTATION
+        random_state (int): sets random state for generation
 
     Methods:
-        fit_transform(X: pd.DataFrame) -> np.ndarray:
+        fit_transform(X):
             Method that transforms any design matrix with n x m dimensions
             into a new design matrix with n x (m + n_artificial_features)
             dimension.
@@ -44,8 +45,8 @@ class ArtificialGenerator:
             X (pd.DataFrame): Design matrix
 
         Returns:
-            X_concat (np.ndarray): Design matrix concatenated with
-            artificial features
+            X_concat (np.ndarray):
+            Design matrix concatenated with artificial features
         """
         X_concat, self.articicial_indices = _make_artificial_features(
             X.values, self.n_artificial_features, self.type, self.random_state
@@ -74,8 +75,9 @@ def _make_artificial_features(
     defaults to 0, set to n_features if n_artificial = 0.
 
     Returns:
-    X_out (np.ndarray): New design matrix with artificials,
-    X.shape =(n_repeats, n_features + n_artificial)
+    X_out (np.ndarray):
+        New design matrix with artificials,
+        X.shape = (n_repeats, n_features + n_artificial)
     """
     n_features: int = X.shape[1]
     n_samples: int = X.shape[0]

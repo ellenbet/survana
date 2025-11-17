@@ -20,6 +20,18 @@ def sksurv_objective_with_args(
     rskf_repeats,
     rskf_splits,
 ) -> float | Any:
+    """Optuna objective TODO
+
+    Args:
+        trial (_type_): _description_
+        sksurv_data (_type_): _description_
+        outer_train_ind (_type_): _description_
+        rskf_repeats (_type_): _description_
+        rskf_splits (_type_): _description_
+
+    Returns:
+        float | Any: _description_
+    """
     params = {"lambda": trial.suggest_float("lambda", 1e-5, 1)}
     nested_scores: list[float] = []
     model = lm.CoxPHSurvivalAnalysis(

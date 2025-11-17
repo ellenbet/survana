@@ -1,4 +1,12 @@
 site_name: Survana
 nav:
-  - Home: index.md
-  - About: about.md
+  - API: index.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          rendering:
+            docstring_style: google

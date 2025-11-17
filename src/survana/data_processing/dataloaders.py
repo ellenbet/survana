@@ -18,10 +18,11 @@ def load_data_for_sksurv_coxnet(
 
     Args:
         path (str): path to preprocessed data
-        separator (str, optional): separator in preprocessed data.
-        Defaults to "\t".
-        response_variable tuple[str, str]: bool + continious metric to measure
-        outcome/response. Defaults to "RFS_STATUS", "RFS_MONTHS".
+        separator (str, optional):
+            separator in preprocessed data. Defaults to "\t".
+        response_variable (tuple[str, str]):
+            bool + continious metric to measure
+            outcome/response. Defaults to "RFS_STATUS", "RFS_MONTHS".
 
     Returns:
         tuple[pd.DataFrame, pd.DataFrame, np.recarray[tuple[Any, ...],

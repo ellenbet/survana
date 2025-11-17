@@ -9,8 +9,8 @@ class ArtificialType(StrEnum):
     """StrEnum class with two accepted types
 
     Attributes:
-        KNOCKOFF = "knockoff"
-        RANDOM_PERMUTATION = "permutation"
+        KNOCKOFF (str): Set to "knockoff"
+        RANDOM_PERMUTATION (str): Set to "permutation"
     """
 
     KNOCKOFF = "knockoff"
