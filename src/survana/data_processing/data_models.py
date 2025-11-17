@@ -140,7 +140,7 @@ class SksurvData(BaseModel):
         random_state=None,
     ) -> Iterator[Any]:  # type: ignore
         """Makes a stratified repeated k fold splitting iterator based on
-        either instance variables or argument X and y
+        either instance variables or argument X and y.
 
         Args:
             X (pd.DataFrame | pd.Series | None, optional): design matrix.

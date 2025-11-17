@@ -6,6 +6,13 @@ from matplotlib.pylab import Generator
 
 
 class ArtificialType(StrEnum):
+    """StrEnum class with two accepted types
+
+    Attributes:
+        KNOCKOFF = "knockoff"
+        RANDOM_PERMUTATION = "permutation"
+    """
+
     KNOCKOFF = "knockoff"
     RANDOM_PERMUTATION = "permutation"
 

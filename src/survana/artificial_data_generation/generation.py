@@ -5,18 +5,40 @@ from .methods import ArtificialType, mx_knockoffs, random_permutation
 
 
 class ArtificialGenerator:
+    """ArtificialGenerator class that calls upon functions
+    in generation.py which produce artificial features,
+    either model x knockoffs or random permutation.
+
+    Attributes:
+        - n_artificial_features (int): number of artificial features,
+        has to be less or equal to number of original features
+        - type (ArtificialType): either KNOCKOFF or RANDOM_PERMUTATION
+        - random_state (int): sets random state for generation
+
+    Methods:
+        fit_transform(X: pd.DataFrame) -> np.ndarray:
+            Method that transforms any design matrix with n x m dimensions
+            into a new design matrix with n x (m + n_artificial_features)
+            dimension.
+
+
+
+    """
+
     def __init__(
         self,
         n_artificial_features: int,
         artificial_type: ArtificialType,
         random_state: int = 42,
-    ):
-        self.n_artificial_features = n_artificial_features
-        self.type = artificial_type
-        self.random_state = random_state
+    ) -> None:
+        self.n_artificial_features: int = n_artificial_features
+        self.type: ArtificialType = artificial_type
+        self.random_state: int = random_state
 
-    def fit_transform(self, X: pd.DataFrame):
-        """_summary_
+    def fit_transform(self, X: pd.DataFrame) -> np.ndarray:
+        """Method that transforms any design matrix with n x m dimensions
+        into a new design matrix with n x (m + n_artificial_features)
+        dimension.
 
         Args:
             X (pd.DataFrame): Design matrix
