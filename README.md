@@ -11,3 +11,27 @@ So far, simple survival models such as Cox-Lasso from Scikit-Survival used in co
 
 ### 2. Explore stability in feature selection by artificial feature injection and quantification of results
 Inspired by the Stabl repository and similarly named Nature publication, we inject artificial features into the design matrix for later feature selection, which allows for FDR-proxy quantification with the ultimate goal of selecting a cut-off on the minimum allowed feature frequency during subsampled feature selection runs.
+
+# How to use:
+Note that this is a very unfinished repository.
+
+## Read documentation:
+Until the documentation is added to Github, it can be built and served through the mkdocs package. To build the documentation, use the following command:
+
+``mkdocs build``
+
+To serve the documentation on your localhost, use the following command:
+
+``mkdocs serve``
+
+Note that this is still a work in progress.
+
+## Use package:
+Until the package is publised on PyPi, feel free to use the repo as is by cloning it, install package after cloning using uv command:
+
+``uv pip install -e .``
+
+## Tests:
+When making changes to repository, test continiously using command:
+
+``pytest tests``
