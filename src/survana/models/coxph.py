@@ -8,11 +8,8 @@ import numpy as np
 import optuna
 import pandas as pd
 import sksurv.linear_model as lm
-from data_processing.data_models import SksurvData
-from data_processing.dataloaders import load_data_for_sksurv_coxnet
 from matplotlib import pyplot as plt
 from mlflow.entities.experiment import Experiment
-from tuning.optuna_objectives import mlflow_sksurv_objective_with_args
 
 from config import (
     CENSOR_STATUS,
@@ -22,11 +19,15 @@ from config import (
     PREFILTERED_DATA_PATH,
     RESULT_FIGURES_DATA_PATH,
 )
+from survana.data_processing.data_models import SksurvData
+from survana.data_processing.data_subsampler import Subsampler
+from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
+from survana.tuning.optuna_objectives import mlflow_sksurv_objective_with_args
 
-SKF_SPLITS = 5
-RSKF_SPLITS = 5
-RSKF_REPEATS = 5
-N_TRIALS = 10
+SKF_SPLITS = 2
+RSKF_SPLITS = 2
+RSKF_REPEATS = 1
+N_TRIALS = 1
 
 
 def coxph() -> None:
@@ -75,11 +76,11 @@ def coxph() -> None:
         + f"_parent_{outer_fold}"
         + str(current_timestamp)[:5],
     ):
-
+        subsampler: Subsampler = Subsampler.kfold(n_splits=SKF_SPLITS)
         outer_best_param: list[float] = [0.0] * SKF_SPLITS
         outer_best_score: list[float] = [0.0] * SKF_SPLITS
         for outer_fold, (outer_train_ind, outer_test_ind) in enumerate(
-            sksurv_data.stratified_kfold_splits(n_splits=SKF_SPLITS)
+            subsampler.split(sksurv_data.X, sksurv_data.y)
         ):
             wrapped_objective: partial[float | Any] = partial(
                 mlflow_sksurv_objective_with_args,

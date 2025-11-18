@@ -41,6 +41,16 @@
     options:
       members_order: alphabetical
 
+::: src.survana.data_processing.data_subsamplers
+    handler: python
+    options:
+      members_order: alphabetical
+
+::: src.survana.data_processing.result_models
+    handler: python
+    options:
+      members_order: alphabetical
+
 ::: src.survana.models
     handler: python
     options:

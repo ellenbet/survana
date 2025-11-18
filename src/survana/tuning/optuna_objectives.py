@@ -5,7 +5,9 @@ import mlflow
 import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
-from data_processing.data_models import SksurvData
+
+from survana.data_processing.data_models import SksurvData
+from survana.data_processing.data_subsampler import Subsampler
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -85,15 +87,10 @@ def mlflow_sksurv_objective_with_args(
 
         inner_X: pd.Series = sksurv_data.X.iloc[outer_train_ind]
         inner_y: np.recarray = sksurv_data.y[outer_train_ind]
-
-        inner_split: Iterator[
-            Any
-        ] = sksurv_data.stratified_repeated_kfold_splits(
-            X=inner_X,
-            y=inner_y,
-            n_repeats=rskf_repeats,
-            n_splits=rskf_splits,
+        subsampler: Subsampler = Subsampler.repeated_kfold(
+            n_splits=rskf_splits, n_repeats=rskf_repeats
         )
+        inner_split: Iterator[Any] = subsampler.split(X=inner_X, y=inner_y)
         for inner_fold, (inner_train_ind, inner_test_ind) in enumerate(
             inner_split
         ):
