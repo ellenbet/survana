@@ -5,6 +5,7 @@ requires-python = ">= 3.11"
 description = "Biomarker and survival analysis software for thesis."
 readme = "README.md"
 license = "AGPL-3.0-or-later"
+
 dependencies = [
     "dotenv>=0.9.9",
     "dotenvx>=0.0.0",
@@ -26,11 +27,8 @@ dependencies = [
     "seaborn>=0.13.2",
     "sqlalchemy>=2.0.43",
     "xgboost>=3.0.5",
-]
-
-[dependency-groups]
-dev = [
     "ipykernel>=7.1.0",
+    "pytest-skip-slow>=0.0.5",
 ]
 
 [tool.hatch.build.targets.wheel]
@@ -38,3 +36,7 @@ packages = ["src/survana"]
 
 [tool.hatch.build]
 include = ["src/survana/py.typed"]
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"

@@ -35,3 +35,7 @@ Until the package is publised on PyPi, feel free to use the repo as is by clonin
 When making changes to repository, test continiously using command:
 
 ``pytest tests``
+
+To include full integration test, run command:
+
+``pytest tests --slow``
