@@ -41,7 +41,7 @@
     options:
       members_order: alphabetical
 
-::: src.survana.data_processing.data_subsamplers
+::: src.survana.data_processing.data_subsampler
     handler: python
     options:
       members_order: alphabetical
