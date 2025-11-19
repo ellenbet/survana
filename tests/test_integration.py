@@ -35,10 +35,8 @@ def test__tiny_integration(
     )
 
     model.fit(art_X, y)
-
     results: Result = Result(feature_names + artificial_names)
     top_features = results.get_top_features_and_save_frequencies(model.coef_)
-
     logger.info("-----------TOP FEATURES----------")
     info_str: str = ""
     for feature in top_features.keys():
@@ -50,7 +48,6 @@ def test__tiny_integration(
     logger.info(info_str)
 
     for feature in results.feature_frequencies.keys():
-
         assert (
             results.feature_frequencies[feature][0] == 1
             or results.feature_frequencies[feature][0] == 0
@@ -59,6 +56,16 @@ def test__tiny_integration(
 
         assert (
             len(results.feature_frequencies[feature]) == 1
+        ), "Expected all features to contain one element, "
+        f"instead got {len(results.feature_frequencies[feature])}"
+
+    results.save_frequencies(model.coef_)
+    results.save_frequencies(model.coef_)
+    results.save_frequencies(model.coef_)
+
+    for feature in results.feature_frequencies.keys():
+        assert (
+            len(results.feature_frequencies[feature]) == 4
         ), "Expected all features to contain one element, "
         f"instead got {len(results.feature_frequencies[feature])}"
 
