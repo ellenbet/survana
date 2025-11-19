@@ -22,7 +22,7 @@ def mx_knockoffs(
     n_samples: int,
     n_features,
     n_artificial: int,
-    random_state: int,
+    random_state: int | None,
 ) -> np.ndarray:
     """Function adjusted from Stabl:
     https://github.com/gregbellan/Stabl/blob/stabl_lw/stabl/stabl.py
@@ -78,7 +78,7 @@ def mx_knockoffs(
 
 
 def random_permutation(
-    X: np.ndarray, n_artificial: int, random_state: int
+    X: np.ndarray, n_artificial: int, random_state: int | None
 ) -> np.ndarray:
     """Function adjusted from Stabl:
     https://github.com/gregbellan/Stabl/blob/stabl_lw/stabl/stabl.py

@@ -22,7 +22,10 @@ from config import (
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
-from survana.tuning.optuna_objectives import mlflow_sksurv_objective_with_args
+from survana.tuning.optuna_objectives import (
+    mlflow_non_nested_objective_with_args,
+    mlflow_sksurv_objective_with_args,
+)
 
 SKF_SPLITS = 2
 RSKF_SPLITS = 2
@@ -156,11 +159,7 @@ def coxph() -> None:
 def non_nested_coxph() -> None:
     """Full model with Sksurv Cox-Lasso, using Optuna and MLFlow,
     but non-nested"""
-    # TODO FINISH THIS
     today: date = date.today()
-    current_datetime: datetime = datetime.now()
-    current_timestamp: float = current_datetime.timestamp()
-
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
     )
@@ -176,6 +175,7 @@ def non_nested_coxph() -> None:
     )
 
     sksurv_data: SksurvData = SksurvData(data_collection=data_collection)
+    subsampler = Subsampler.shuffle_split(n_splits=5)
 
     logger.info(
         "\nCensored patients in data: "
@@ -191,16 +191,19 @@ def non_nested_coxph() -> None:
     ident = experiment.experiment_id
     logger.info(f"\nStarting MLflow with experiment id {ident}")
 
-    outer_fold: int = 0
-    # parent run
-    with mlflow.start_run(
-        experiment_id=ident,
-        run_name=str(today)
-        + "_"
-        + COXPH_EXPERIMENT_ID
-        + f"_parent_{outer_fold}"
-        + str(current_timestamp)[:5],
-    ):
+    for test, train in subsampler.split(sksurv_data.X, sksurv_data.y):
+        wrapped_objective: partial[float | Any] = partial(
+            mlflow_non_nested_objective_with_args,
+            sksurv_data=sksurv_data,
+            test_ind=test,
+            train_ind=train,
+            run_name=str(today) + "_tester",
+            experiment_id=ident,
+        )
+        study: optuna.Study = optuna.create_study(direction="maximize")
+        study.optimize(wrapped_objective, n_trials=20)
+        best_param = study.best_params["lambda"]
+        logger.info(f"Best lambda is {best_param}")
 
         # ending run to start new logging session for next cv
         mlflow.end_run()

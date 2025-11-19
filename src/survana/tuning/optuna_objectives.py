@@ -117,3 +117,60 @@ def mlflow_sksurv_objective_with_args(
         )
 
     return score
+
+
+def mlflow_non_nested_objective_with_args(
+    trial,
+    sksurv_data: SksurvData,
+    test_ind: list[int],
+    train_ind: list[int],
+    run_name: str,
+    experiment_id: str,
+) -> float | Any:
+    """_summary_
+
+    Args:
+        trial (_type_): _description_
+        sksurv_data (SksurvData): _description_
+        test_ind (list[int]): _description_
+        train_ind (list[int]): _description_
+        run_name (str): _description_
+        experiment_id (str): _description_
+
+    Returns:
+        float | Any: _description_
+    """
+    with mlflow.start_run(
+        experiment_id=experiment_id, run_name=run_name, nested=False
+    ):
+        params: dict[str, Any] = {
+            "lambda": trial.suggest_float("lambda", 1e-5, 1e1, log=True)
+        }
+
+        model = lm.CoxPHSurvivalAnalysis(
+            verbose=True,
+            alpha=params["lambda"],
+            n_iter=100,
+        )
+
+        X_train: pd.DataFrame = sksurv_data.X.iloc[train_ind, :]
+        y_train: np.ndarray[
+            tuple[Any, ...], np.dtype[np.float64]
+        ] = sksurv_data.y[train_ind]
+
+        try:
+            model.fit(X_train, y_train)
+        except np.linalg.LinAlgError:
+            logger.error(
+                "Singular matrix multiplication attempted - "
+                + "skipping results.."
+            )
+            return 0
+
+        score: float | Any = model.score(
+            sksurv_data.X.iloc[test_ind, :], y=sksurv_data.y[test_ind]
+        )
+
+        mlflow.log_param("lambda", params["lambda"])
+        mlflow.log_metric("c-index", score)
+        return score

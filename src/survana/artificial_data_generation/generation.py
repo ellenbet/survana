@@ -30,11 +30,11 @@ class ArtificialGenerator:
         self,
         n_artificial_features: int,
         artificial_type: ArtificialType,
-        random_state: int = 42,
+        random_state: int | None = None,
     ) -> None:
         self.n_artificial_features: int = n_artificial_features
         self.type: ArtificialType = artificial_type
-        self.random_state: int = random_state
+        self.random_state: int | None = random_state
 
     def fit_transform(self, X: pd.DataFrame) -> np.ndarray:
         """Method that transforms any design matrix with n x m dimensions
@@ -58,7 +58,7 @@ def _make_artificial_features(
     X: np.ndarray,
     n_artificial_features: int = 0,
     artificial_type: ArtificialType = ArtificialType.KNOCKOFF,
-    random_state: int = 42,
+    random_state: int | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Function adjusted from Stabl:
