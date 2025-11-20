@@ -15,6 +15,11 @@ Inspired by the Stabl repository and similarly named Nature publication, we inje
 # How to use:
 Note that this is a very unfinished repository.
 
+## Use package:
+Until the package is publised on PyPi, feel free to use the repo as is by cloning it, install package after cloning using uv command:
+
+``uv pip install -e .``
+
 ## Read documentation:
 Until the documentation is added to Github, it can be built and served through the mkdocs package. To build the documentation, use the following command:
 
@@ -25,11 +30,6 @@ To serve the documentation on your localhost, use the following command:
 ``mkdocs serve``
 
 Note that this is still a work in progress.
-
-## Use package:
-Until the package is publised on PyPi, feel free to use the repo as is by cloning it, install package after cloning using uv command:
-
-``uv pip install -e .``
 
 ## Tests:
 When making changes to repository, test continiously using command:
