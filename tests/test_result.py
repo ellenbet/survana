@@ -1,79 +1,153 @@
 from typing import Any
 
+import matplotlib.pyplot as plt
 import numpy as np
+import pytest
 
 from survana.data_processing.result_models import Result
 
 
-def test_result_with_int(
+def test_result_dict(
     test_result_data: tuple[
         list[int],
         list[str],
         list[str],
         np.ndarray[tuple[Any, ...], np.dtype[Any]],
+        list[float],
     ],
 ) -> None:
-    true_int, _, fake_str, coefs = test_result_data
+    true_int, true_int_str, fake_str, coefs, hyperparam = test_result_data
 
-    result: Result = Result(true_int + fake_str)
-    top_features: dict[
-        str, float
-    ] = result.get_top_features_and_save_frequencies(coefs)
+    result: Result = Result(true_int_str + fake_str)
+    for hp in hyperparam:
+        assert (
+            result.results[result.feature_names[0], hp]["count"] == 0
+        ), "count not 0"
+        assert (
+            result.results[result.feature_names[0], hp]["occurence"] == 0
+        ), "occurence not 0"
 
-    assert len(top_features.keys()) == 3, (
-        f"Expected top features to have 3 elements, "
-        f"got {len(top_features.keys())}"
-    )
+    result.save_results(hyperparam[0], coefs)
 
-    for feature_name, true_freq in zip(
-        result.feature_frequencies.keys(), [0, 0, 1, 1, 0, 1]
-    ):
-        assert len(result.feature_frequencies[feature_name]) == 1, (
-            f"Expected length of 1 for all frequency counter lists, "
-            f"got {len(result.feature_frequencies[feature_name])} instead."
-        )
-        freq = result.feature_frequencies[feature_name][0]
-        assert freq == true_freq, (
-            f"Found frequency/binary indicator not valid, got {freq} "
-            f"but expected {true_freq}"
-        )
-
-    result.save_frequencies(coefs)
-
-    assert len(top_features.keys()) == 3, (
-        f"Expected top features to have 3 elements, "
-        f"got {len(top_features.keys())}"
-    )
+    for hp in hyperparam[1:]:
+        assert (
+            result.results[result.feature_names[0], hp]["count"] == 0
+        ), "count not 0"
+        assert (
+            result.results[result.feature_names[0], hp]["occurence"] == 0
+        ), "occurence not 0"
 
     for feature_name, true_freq in zip(
-        result.feature_frequencies.keys(), [0, 0, 1, 1, 0, 1]
+        result.feature_names, [1, 1, 1, 0, 0, 0]
     ):
-        assert len(result.feature_frequencies[feature_name]) == 2, (
-            f"Expected length of 1 for all frequency counter lists, "
-            f"got {len(result.feature_frequencies[feature_name])} instead."
+        o: int = result.results[feature_name, hyperparam[0]]["occurence"]
+        c: int = result.results[feature_name, hyperparam[0]]["count"]
+        assert o == true_freq, (
+            f"Expected occurence to be {true_freq}"
+            f"for {feature_name}, got"
+            f"{o} "
+            "instead."
         )
-        frequency: np.floating[Any] = np.mean(
-            result.feature_frequencies[feature_name]
-        )
-        assert frequency == true_freq, (
-            f"Found frequency/binary indicator not valid, got {frequency} "
-            f"but expected {true_freq}"
+
+        assert c == 1, (
+            f"Expected count to be {true_freq} for {feature_name}, "
+            f"got {c}."
         )
 
 
-def test_result_assert(
+def test_occurence_increase(
     test_result_data: tuple[
         list[int],
         list[str],
         list[str],
         np.ndarray[tuple[Any, ...], np.dtype[Any]],
+        list[float],
     ],
 ) -> None:
-    true_int, true_str, fake_str, coefs = test_result_data
+    true_int, true_int_str, fake_str, coefs, hyperparam = test_result_data
+    result: Result = Result(true_int_str + fake_str)
+    result.save_results(hyperparam[0], coefs)
+    result.save_results(hyperparam[0], coefs)
+    o_1 = result.results[("1", hyperparam[0])]["occurence"]
+    assert o_1 == 2, "true 1 occurence failed, got " + f"{o_1}"
+    assert (
+        result.results[("1", hyperparam[0])]["count"] == 2
+    ), "true 1 count failed"
+    assert (
+        result.results[("fake_1", hyperparam[0])]["occurence"] == 0
+    ), "fake 1 occurence failed"
+    assert (
+        result.results[("fake_1", hyperparam[0])]["count"] == 2
+    ), "fake 1 count failed"
+
+
+def test_save_and_get_results(
+    test_result_data: tuple[
+        list[int],
+        list[str],
+        list[str],
+        np.ndarray[tuple[Any, ...], np.dtype[Any]],
+        list[float],
+    ],
+) -> None:
+    true_int, true_str, fake_str, coefs, hyperparam = test_result_data
+    result: Result = Result(true_str)
+    result.save_results(hyperparam[0], coefs)
+    result.get_results()
+
+
+def test_result_names(
+    test_result_data: tuple[
+        list[int],
+        list[str],
+        list[str],
+        np.ndarray[tuple[Any, ...], np.dtype[Any]],
+        list[float],
+    ],
+) -> None:
+    true_int, true_str, fake_str, coefs, hyperparam = test_result_data
     try:
-        result: Result = Result(true_int)
-        result.get_top_features_and_save_frequencies(coefs)
+        Result(true_str + [1])
+    except AssertionError:
+        return
+    pytest.fail("Non-str name allowed in result")
+
+
+def test_plot_results(
+    monkeypatch,
+    test_result_data: tuple[
+        list[int],
+        list[str],
+        list[str],
+        np.ndarray[tuple[Any, ...], np.dtype[Any]],
+        list[float],
+    ],
+) -> None:
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+    true_int, true_str, fake_str, coefs, hyperparam = test_result_data
+    result: Result = Result(true_str)
+    result.save_results(hyperparam[0], coefs)
+    result.save_results(hyperparam[1], coefs)
+    result.save_results(hyperparam[2], coefs)
+    result.plot_results()
+
+
+def test_failure_plot_results(
+    monkeypatch,
+    test_result_data: tuple[
+        list[int],
+        list[str],
+        list[str],
+        np.ndarray[tuple[Any, ...], np.dtype[Any]],
+        list[float],
+    ],
+) -> None:
+    monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+    true_int, true_str, fake_str, coefs, hyperparam = test_result_data
+    result: Result = Result(true_str)
+    try:
+        result.plot_results()
     except AssertionError:
         return None
 
-    assert 1 == 2, "Assert check not passed in Result class"
+    pytest.fail("Failed to catch empty result plotting")

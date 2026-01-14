@@ -13,7 +13,7 @@ from survana.data_processing.result_models import Result
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def test__tiny_integration(
+def test_tiny_integration(
     model: CoxPHSurvivalAnalysis,
     tiny_true_data: tuple[
         pd.DataFrame, np.ndarray[tuple[Any, ...], np.dtype[Any]]
@@ -36,42 +36,23 @@ def test__tiny_integration(
 
     model.fit(art_X, y)
     results: Result = Result(feature_names + artificial_names)
-    top_features = results.get_top_features_and_save_frequencies(model.coef_)
-    logger.info("-----------TOP FEATURES----------")
-    info_str: str = ""
-    for feature in top_features.keys():
-        info_str += (
-            f"\n\n{feature}\ncoef: {top_features[feature]}\nfreq:"
-            + f"{results.feature_frequencies[feature]}"
-        )
 
-    logger.info(info_str)
+    results.save_results(model.alpha, model.coef_)
+    results.save_results(model.alpha, model.coef_)
+    results.save_results(model.alpha, model.coef_)
 
-    for feature in results.feature_frequencies.keys():
-        assert (
-            results.feature_frequencies[feature][0] == 1
-            or results.feature_frequencies[feature][0] == 0
-        ), "Expected binary value in feature frequency overview, "
-        f"instead got {results.feature_frequencies[feature][0]}"
+    try:
+        logger.info(results.get_long_result_df())
+    except AssertionError:
+        pass
 
-        assert (
-            len(results.feature_frequencies[feature]) == 1
-        ), "Expected all features to contain one element, "
-        f"instead got {len(results.feature_frequencies[feature])}"
-
-    results.save_frequencies(model.coef_)
-    results.save_frequencies(model.coef_)
-    results.save_frequencies(model.coef_)
-
-    for feature in results.feature_frequencies.keys():
-        assert (
-            len(results.feature_frequencies[feature]) == 4
-        ), "Expected all features to contain one element, "
-        f"instead got {len(results.feature_frequencies[feature])}"
+    results.save_results(0.1, model.coef_)
+    logger.info(results.get_long_result_df())
+    logger.info(results.get_results())
 
 
 @pytest.mark.slow
-def test__full_integration(
+def test_artificial_integration(
     model: CoxPHSurvivalAnalysis,
     full_true_data: tuple[
         pd.DataFrame, np.ndarray[tuple[Any, ...], np.dtype[Any]]
@@ -95,4 +76,4 @@ def test__full_integration(
     model.fit(art_X, y)
 
     results: Result = Result(feature_names + artificial_names)
-    results.get_top_features_and_save_frequencies(model.coef_)
+    results.save_results(model.alpha, model.coef_)

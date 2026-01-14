@@ -40,13 +40,21 @@ def test_result_data() -> tuple[
     list[str],
     list[str],
     np.ndarray[tuple[Any, ...], np.dtype[Any]],
+    list[float],
 ]:
     true_features_str: list[str] = ["1", "2", "3"]
     true_features_int: list[int] = [1, 2, 3]
     fake_features_str: list[str] = ["fake_1", "fake_2", "fake_3"]
+    hyperparams: list[float] = [0.1, 0.2, 0.3]
 
-    coefs: np.ndarray = np.array([0, 0, 2, 3, 0, 1])
-    return true_features_int, true_features_str, fake_features_str, coefs
+    coefs: np.ndarray = np.array([1, 2, 3, 0, 0, 0])
+    return (
+        true_features_int,
+        true_features_str,
+        fake_features_str,
+        coefs,
+        hyperparams,
+    )
 
 
 @pytest.fixture

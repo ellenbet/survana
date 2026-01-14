@@ -2701,6 +2701,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pytest-plt"
+version = "1.1.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "matplotlib" },
+    { name = "pytest" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0f/bc/2cbd5862edaddf9c06cbb90452e200dbae3106f58ac6b75737cc6e7c14f2/pytest-plt-1.1.1.tar.gz", hash = "sha256:4cebb2547db028aaeecbb481356df3eb6cb3a66053ea5e9170a8683b55d41611", size = 20437, upload-time = "2024-01-17T20:29:21.831Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d9/cd/e479c8ec8487cc2d9cb918a4c6a5391a1de0fc40a9828e1dc85c45cb933e/pytest_plt-1.1.1-py3-none-any.whl", hash = "sha256:f7b700f2a9add47666fc40e03ebd487f29ed20b558249cff48ff4aac62bd6be6", size = 12133, upload-time = "2024-01-17T20:29:20.774Z" },
+]
+
+[[package]]
 name = "pytest-skip-slow"
 version = "0.0.5"
 source = { registry = "https://pypi.org/simple" }
@@ -3438,6 +3451,7 @@ dependencies = [
     { name = "pre-commit" },
     { name = "psycopg2-binary" },
     { name = "pytest" },
+    { name = "pytest-plt" },
     { name = "pytest-skip-slow" },
     { name = "ruff" },
     { name = "scikit-learn" },
@@ -3464,6 +3478,7 @@ requires-dist = [
     { name = "pre-commit", specifier = ">=4.3.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.10" },
     { name = "pytest", specifier = ">=9.0.0" },
+    { name = "pytest-plt", specifier = ">=1.1.1" },
     { name = "pytest-skip-slow", specifier = ">=0.0.5" },
     { name = "ruff", specifier = ">=0.13.3" },
     { name = "scikit-learn", specifier = ">=1.7.1" },

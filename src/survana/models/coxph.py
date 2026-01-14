@@ -95,7 +95,9 @@ def coxph() -> None:
                 experiment_id=ident,
             )
             study: optuna.Study = optuna.create_study(direction="maximize")
-            study.optimize(wrapped_objective, n_trials=N_TRIALS)
+            study.optimize(
+                wrapped_objective, n_trials=N_TRIALS, show_progress_bar=True
+            )
             best_param = study.best_params["lambda"]
             results = study.trials_dataframe()
             results["value"].sort_values().reset_index(drop=True).plot(

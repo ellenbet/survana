@@ -1,7 +1,14 @@
+import logging
+
 import numpy as np
 import pandas as pd
 
 from .methods import ArtificialType, mx_knockoffs, random_permutation
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class ArtificialGenerator:
@@ -48,6 +55,13 @@ class ArtificialGenerator:
             X_concat (np.ndarray):
             Design matrix concatenated with artificial features
         """
+
+        if self.n_artificial_features != X.shape[1]:
+            logging.warning(
+                f"Making {self.n_artificial_features}"
+                + f"even though X has {X.shape[1]} columns"
+            )
+
         X_concat, self.articicial_indices = _make_artificial_features(
             X.values, self.n_artificial_features, self.type, self.random_state
         )
