@@ -7,7 +7,7 @@ import pandas as pd
 import sksurv.linear_model as lm
 from tuning.training_wrappers import robust_train
 
-from config import LOG_LAMBDA_MAX, LOG_LAMBDA_MIN
+from config import LOG_LAMBDA_MAX, LOG_LAMBDA_MIN, MODEL_TYPE
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 
@@ -154,7 +154,7 @@ def mlflow_non_nested_objective_with_args(
 
         model: lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float = (
             robust_train(
-                model_type="lasso",
+                model_type=MODEL_TYPE,
                 X=sksurv_data.X.to_numpy(),
                 y=sksurv_data.y,
                 param=params["lambda"],
@@ -209,7 +209,7 @@ def mlflow_non_nested_objective_artificial(
 
         model: lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float = (
             robust_train(
-                model_type="lasso",
+                model_type=MODEL_TYPE,
                 X=X,
                 y=y,
                 param=params["lambda"],

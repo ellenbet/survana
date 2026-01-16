@@ -11,6 +11,7 @@ from config import (
     COEF_ZERO_CUTOFF,
     LOG_LAMBDA_MAX,
     LOG_LAMBDA_MIN,
+    MODEL_TYPE,
     MONTHS_BEFORE_EVENT,
     N_LAMBDA,
     PREFILTERED_DATA_PATH,
@@ -31,10 +32,15 @@ logging.basicConfig(
 logger: logging.Logger = logging.getLogger(__name__)
 
 
-def subsampled_stability_coxph():
-    """Stability selection function
+def stability_selection():
+    """Stability selection function with subsampling B * N_LAMBDA times.
     Number of sumsamples per lambda is B = RSKF_SPLITS * RSKF_REPEATS,
     see config.py for constant definitions.
+
+    Function relies on robust_train() function which can be used
+    with Ridge and Lasso Cox-regression, can be written to function
+    with Elastic Net as well.
+
     """
 
     data_collection: tuple[
@@ -71,7 +77,7 @@ def subsampled_stability_coxph():
             logger.info(f"Fitting model for hyperparam {param}")
             model: (
                 lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float
-            ) = robust_train("lasso", art_X, sksurv_data.y, param, train)
+            ) = robust_train(MODEL_TYPE, art_X, sksurv_data.y, param, train)
 
             if isinstance(model, float):
                 pass

@@ -1,7 +1,7 @@
 # optuna.logging.set_verbosity(optuna.logging.ERROR)
 import warnings
 
-from survana.models.stability_selection import subsampled_stability_coxph
+from survana.models.stability_selection import stability_selection
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
-subsampled_stability_coxph()
+stability_selection()
