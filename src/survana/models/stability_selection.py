@@ -8,6 +8,9 @@ import tqdm
 
 from config import (
     CENSOR_STATUS,
+    COEF_ZERO_CUTOFF,
+    LOG_LAMBDA_MAX,
+    LOG_LAMBDA_MIN,
     MONTHS_BEFORE_EVENT,
     N_LAMBDA,
     PREFILTERED_DATA_PATH,
@@ -29,7 +32,10 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 def subsampled_stability_coxph():
-    """Stabiliry selection function"""
+    """Stability selection function
+    Number of sumsamples per lambda is B = RSKF_SPLITS * RSKF_REPEATS,
+    see config.py for constant definitions.
+    """
 
     data_collection: tuple[
         pd.DataFrame, pd.DataFrame, np.recarray[tuple[Any, ...], np.dtype[Any]]
@@ -38,8 +44,6 @@ def subsampled_stability_coxph():
         response_variables=(CENSOR_STATUS, MONTHS_BEFORE_EVENT),
     )
 
-    # B = RSKF_SPLITS * RSKF_REPEATS, model training sessions for each
-    # hyperparameter lambda
     subsampler: Subsampler = Subsampler.repeated_kfold(
         n_splits=RSKF_SPLITS, n_repeats=RSKF_REPEATS
     )
@@ -54,14 +58,13 @@ def subsampled_stability_coxph():
     artificial_names: list[str] = [
         f"artificial_{i}" for i in range(feature_no)
     ]
-    start_lambda = -8
-    stop_lambda = 1
-    params: np.ndarray = np.logspace(start_lambda, stop_lambda, N_LAMBDA)
+
+    params: np.ndarray = np.logspace(LOG_LAMBDA_MIN, LOG_LAMBDA_MAX, N_LAMBDA)
     results: Result = Result(
         feature_names + artificial_names,
-        rounding_cutoff=4,
-        bin_min=start_lambda,
-        bin_max=stop_lambda,
+        rounding_cutoff=COEF_ZERO_CUTOFF,
+        bin_min=LOG_LAMBDA_MIN,
+        bin_max=LOG_LAMBDA_MAX,
     )
     for test, train in subsampler.split(art_X, sksurv_data.y):
         for param in tqdm.tqdm(params):

@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
 
+from config import MODEL_ITERATIONS
+
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
@@ -17,7 +19,7 @@ def robust_train(
     y: np.ndarray[tuple[Any, ...], np.dtype[np.float64]],
     param: float,
     train_ind: list[int],
-    n_iter: int = 100,
+    n_iter: int = MODEL_ITERATIONS,
 ) -> lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float:
     """Function to train on a specific parameter, with handling for
     singular matrix multiplication to prevent crash.
@@ -42,7 +44,6 @@ def robust_train(
         )
     else:
         logger.error("No model type specified")
-        return 0.0
 
     X_train = pd.DataFrame(X[train_ind, :])
     y_train: np.ndarray[tuple[Any, ...], np.dtype[np.float64]] = y[train_ind]

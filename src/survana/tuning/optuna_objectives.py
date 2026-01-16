@@ -5,7 +5,9 @@ import mlflow
 import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
+from tuning.training_wrappers import robust_train
 
+from config import LOG_LAMBDA_MAX, LOG_LAMBDA_MIN
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 
@@ -14,15 +16,15 @@ logging.basicConfig(
 )
 logger: logging.Logger = logging.getLogger(__name__)
 
+# TODO clean up optuna objectives
+
 
 def sksurv_objective_with_args(
     trial,
     sksurv_data,
-    outer_train_ind,
-    rskf_repeats,
-    rskf_splits,
+    outer_train_ind: list[int],
 ) -> float | Any:
-    """Optuna objective TODO
+    """Optuna objective, uses stratified_repeated_kfold_splits
 
     Args:
         trial (_type_): _description_
@@ -34,7 +36,9 @@ def sksurv_objective_with_args(
     Returns:
         float | Any: _description_
     """
-    params = {"lambda": trial.suggest_float("lambda", 1e-5, 1)}
+    params = {
+        "lambda": trial.suggest_float("lambda", LOG_LAMBDA_MIN, LOG_LAMBDA_MAX)
+    }
     nested_scores: list[float] = []
     model = lm.CoxPHSurvivalAnalysis(
         verbose=True,
@@ -46,10 +50,7 @@ def sksurv_objective_with_args(
     inner_y = sksurv_data.y[outer_train_ind]
 
     inner_split: Iterator[Any] = sksurv_data.stratified_repeated_kfold_splits(
-        X=inner_X,
-        y=inner_y,
-        n_repeats=rskf_repeats,
-        n_splits=rskf_splits,
+        X=inner_X, y=inner_y
     )
     for _, (inner_train_ind, inner_test_ind) in enumerate(inner_split):
         model.fit(inner_X.iloc[inner_train_ind], y=inner_y[inner_train_ind])
@@ -75,7 +76,9 @@ def mlflow_sksurv_objective_with_args(
         experiment_id=experiment_id, run_name=run_name, nested=True
     ):
         params: dict[str, Any] = {
-            "lambda": trial.suggest_float("lambda", 1e-5, 1)
+            "lambda": trial.suggest_float(
+                "lambda", LOG_LAMBDA_MIN, LOG_LAMBDA_MAX
+            )
         }
 
         nested_scores: list[float] = []
@@ -144,31 +147,27 @@ def mlflow_non_nested_objective_with_args(
         experiment_id=experiment_id, run_name=run_name, nested=False
     ):
         params: dict[str, Any] = {
-            "lambda": trial.suggest_float("lambda", 1e-5, 1e1, log=True)
+            "lambda": trial.suggest_float(
+                "lambda", LOG_LAMBDA_MIN, LOG_LAMBDA_MAX, log=True
+            )
         }
 
-        model = lm.CoxPHSurvivalAnalysis(
-            verbose=True,
-            alpha=params["lambda"],
-            n_iter=100,
+        model: lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float = (
+            robust_train(
+                model_type="lasso",
+                X=sksurv_data.X.to_numpy(),
+                y=sksurv_data.y,
+                param=params["lambda"],
+                train_ind=train_ind,
+            )
         )
 
-        X_train: pd.DataFrame = sksurv_data.X.iloc[train_ind, :]
-        y_train: np.ndarray[
-            tuple[Any, ...], np.dtype[np.float64]
-        ] = sksurv_data.y[train_ind]
-
-        try:
-            model.fit(X_train, y_train)
-        except np.linalg.LinAlgError:
-            logger.error(
-                "Singular matrix multiplication attempted - "
-                + "skipping results.."
+        score: float | Any = (
+            model
+            if isinstance(model, float)
+            else model.score(
+                sksurv_data.X[test_ind, :], y=sksurv_data.y[test_ind]
             )
-            return 0
-
-        score: float | Any = model.score(
-            sksurv_data.X.iloc[test_ind, :], y=sksurv_data.y[test_ind]
         )
 
         mlflow.log_param("lambda", params["lambda"])
@@ -203,30 +202,26 @@ def mlflow_non_nested_objective_artificial(
         experiment_id=experiment_id, run_name=run_name, nested=False
     ):
         params: dict[str, Any] = {
-            "lambda": trial.suggest_float("lambda", 1e-5, 1e1, log=True)
+            "lambda": trial.suggest_float(
+                "lambda", LOG_LAMBDA_MIN, LOG_LAMBDA_MAX, log=True
+            )
         }
 
-        model = lm.CoxPHSurvivalAnalysis(
-            verbose=True,
-            alpha=params["lambda"],
-            n_iter=100,
+        model: lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float = (
+            robust_train(
+                model_type="lasso",
+                X=X,
+                y=y,
+                param=params["lambda"],
+                train_ind=train_ind,
+            )
         )
 
-        X_train: pd.DataFrame = pd.DataFrame(X[train_ind, :])
-        y_train: np.ndarray[tuple[Any, ...], np.dtype[np.float64]] = y[
-            train_ind
-        ]
-
-        try:
-            model.fit(X_train, y_train)
-        except np.linalg.LinAlgError:
-            logger.error(
-                "Singular matrix multiplication attempted - "
-                + "skipping results.."
-            )
-            return 0.0
-
-        score: float | Any = model.score(X[test_ind, :], y=y[test_ind])
+        score: float | Any = (
+            model
+            if isinstance(model, float)
+            else model.score(X[test_ind, :], y=y[test_ind])
+        )
 
         mlflow.log_param("lambda", params["lambda"])
         mlflow.log_metric("c-index", score)

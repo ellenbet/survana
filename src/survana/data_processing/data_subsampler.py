@@ -12,7 +12,7 @@ from sklearn.model_selection import (
     StratifiedShuffleSplit,
 )
 
-from config import RSKF_REPEATS, RSKF_SPLITS, SKF_SPLITS
+from config import MCCV_SPLITS, RSKF_REPEATS, RSKF_SPLITS, SKF_SPLITS
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ class Subsampler:
     def __init__(
         self,
         subsampling: SubsamplingStrategy,
-        n_splits: int = 5,
+        n_splits: int = SKF_SPLITS,
         n_repeats: int = 0,
         test_size: float = 0,
         shuffle: bool = False,
@@ -53,7 +53,7 @@ class Subsampler:
     @classmethod
     def kfold(
         cls,
-        n_splits: int = 5,
+        n_splits: int = SKF_SPLITS,
         shuffle: bool = False,
         random_state: None | int = None,
     ) -> Subsampler:
@@ -67,8 +67,8 @@ class Subsampler:
     @classmethod
     def repeated_kfold(
         cls,
-        n_splits: int = 5,
-        n_repeats: int = 10,
+        n_splits: int = RSKF_SPLITS,
+        n_repeats: int = RSKF_REPEATS,
         random_state: None | int = None,
     ) -> Subsampler:
         return cls(
@@ -182,7 +182,7 @@ def stratified_repeated_kfold_splits(
 def stratified_shuffle_split(
     X: pd.DataFrame,
     y: np.recarray[tuple[Any, ...], np.dtype[np.float64]],
-    n_splits: int = 5,
+    n_splits: int = MCCV_SPLITS,
     test_size: float = 0.2,
     random_state: None | int = None,
 ) -> Iterator[Any]:  # type: ignore
