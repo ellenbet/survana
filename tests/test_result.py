@@ -40,8 +40,12 @@ def test_result_dict(
     for feature_name, true_freq in zip(
         result.feature_names, [1, 1, 1, 0, 0, 0]
     ):
-        o: int = result.results[feature_name, hyperparam[0]]["occurence"]
-        c: int = result.results[feature_name, hyperparam[0]]["count"]
+        o: int = result.results[feature_name, result.get_bin(hyperparam[0])][
+            "occurence"
+        ]
+        c: int = result.results[feature_name, result.get_bin(hyperparam[0])][
+            "count"
+        ]
         assert o == true_freq, (
             f"Expected occurence to be {true_freq}"
             f" for {feature_name}, got"
@@ -64,20 +68,21 @@ def test_occurence_increase(
         list[float],
     ],
 ) -> None:
-    true_int, true_int_str, fake_str, coefs, hyperparam = test_result_data
+    _, true_int_str, fake_str, coefs, hyperparams = test_result_data
     result: Result = Result(true_int_str + fake_str)
-    result.save_results(hyperparam[0], coefs)
-    result.save_results(hyperparam[0], coefs)
-    o_1 = result.results[("1", hyperparam[0])]["occurence"]
+    hyperparam: float = result.get_bin(hyperparams[0])
+    result.save_results(hyperparam, coefs)
+    result.save_results(hyperparam, coefs)
+    o_1 = result.results[(result.feature_names[0], hyperparam)]["occurence"]
     assert o_1 == 2, "true 1 occurence failed, got " + f" {o_1}"
     assert (
-        result.results[("1", hyperparam[0])]["count"] == 2
+        result.results[(true_int_str[0], hyperparam)]["count"] == 2
     ), "true 1 count failed"
     assert (
-        result.results[("fake_1", hyperparam[0])]["occurence"] == 0
+        result.results[("fake_1", hyperparam)]["occurence"] == 0
     ), "fake 1 occurence failed"
     assert (
-        result.results[("fake_1", hyperparam[0])]["count"] == 2
+        result.results[("fake_1", hyperparam)]["count"] == 2
     ), "fake 1 count failed"
 
 

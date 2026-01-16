@@ -56,7 +56,7 @@ class Result:
             hyperparam (float): in this case lambda
             all_coefs (np.ndarray): coefs from regression
         """
-        hyperparam_bin: float = self._get_bin(hyperparam)
+        hyperparam_bin: float = self.get_bin(hyperparam)
         for coef, feature_name in zip(all_coefs, self.feature_names):
             self.results[(feature_name, hyperparam_bin)][
                 "occurence"
@@ -127,6 +127,29 @@ class Result:
         else:
             return 0
 
+    def get_bin(
+        self,
+        hyperparam: float,
+    ) -> float:
+        """Methods that returns the bin belonging
+        to the hyperparameter, depends on bin_min
+        and bin_max which is set by default in config
+
+        Args:
+            hyperparam (float): hyperparameter
+
+        Returns:
+            float: name of bin
+        """
+        log_hyp = np.log10(hyperparam)
+        assert log_hyp >= self.bin_min and hyperparam <= self.bin_max, [
+            f"non-valid log(hyperparameter) {log_hyp}, must be between "
+            + f"{self.bin_min} and {self.bin_max}"
+        ]
+        return self._names[
+            np.searchsorted(self._bins[:], [hyperparam], side="left") - 1
+        ][0]
+
     def _hyperparam_bin_configuration(
         self,
         min: int,
@@ -152,25 +175,3 @@ class Result:
                 for i in range(1, len(self._bins))
             ]
         )
-
-    def _get_bin(
-        self,
-        hyperparam: float,
-    ) -> float:
-        """Private methods that returns the bin belonging
-        to the hyperparameter.
-
-        Args:
-            hyperparam (float): hyperparameter
-
-        Returns:
-            float: name of bin
-        """
-        log_hyp = np.log10(hyperparam)
-        assert log_hyp >= self.bin_min and hyperparam <= self.bin_max, [
-            f"non-valid log(hyperparameter) {log_hyp}, must be between "
-            + f"{self.bin_min} and {self.bin_max}"
-        ]
-        return self._names[
-            np.searchsorted(self._bins[:], [hyperparam], side="left") - 1
-        ][0]
