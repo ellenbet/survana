@@ -166,12 +166,10 @@ class Result:
         Returns:
             float: name of bin
         """
-        assert (
-            hyperparam >= 10**self.bin_min
-            and hyperparam <= 10**self.bin_max
-        ), [
-            f"non-valid hyperparameter {hyperparam}, must be between "
-            + f"{10**self.bin_min} and {10**self.bin_max}"
+        log_hyp = np.log10(hyperparam)
+        assert log_hyp >= self.bin_min and hyperparam <= self.bin_max, [
+            f"non-valid log(hyperparameter) {log_hyp}, must be between "
+            + f"{self.bin_min} and {self.bin_max}"
         ]
         return self._names[
             np.searchsorted(self._bins[:], [hyperparam], side="left") - 1
