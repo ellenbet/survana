@@ -45,16 +45,6 @@ class SksurvData(BaseModel):
         censored_patients_percentage (float):
             Proportion of samples that are censored.
 
-    Methods:
-        stratified_kfold_splits(X, y, n_splits, random_state, shuffle):
-            Creates a `StratifiedKFold` iterator using either instance data
-            or the provided `X` and `y`.
-        stratified_repeated_kfold_splits(X, y, n_repeat, n_splits, random_s):
-            Creates a `RepeatedStratifiedKFold` iterator using either
-            instance data or the provided `X` and `y`.
-        get_best_features(all_coefs):
-            Returns a dictionary containing the highest-magnitude model
-            coefficients and their corresponding feature names.
     """
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

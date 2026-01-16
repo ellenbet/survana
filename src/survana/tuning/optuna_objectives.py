@@ -5,11 +5,11 @@ import mlflow
 import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
-from tuning.training_wrappers import robust_train
 
 from config import LOG_LAMBDA_MAX, LOG_LAMBDA_MIN, MODEL_TYPE
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
+from survana.tuning.training_wrappers import robust_train
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

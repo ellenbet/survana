@@ -16,8 +16,12 @@ from config import (
     COXPH_EXPERIMENT_ID,
     COXPH_NON_NESTED_EXPERIMENT_ID,
     MONTHS_BEFORE_EVENT,
+    N_TRIALS,
     PREFILTERED_DATA_PATH,
     RESULT_FIGURES_DATA_PATH,
+    RSKF_REPEATS,
+    RSKF_SPLITS,
+    SKF_SPLITS,
 )
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
@@ -27,23 +31,17 @@ from survana.tuning.optuna_objectives import (
     mlflow_sksurv_objective_with_args,
 )
 
-SKF_SPLITS = 2
-RSKF_SPLITS = 2
-RSKF_REPEATS = 1
-N_TRIALS = 1
+today: date = date.today()
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def coxph() -> None:
     """Full model with Sksurv Cox-Lasso, using Optuna and MLFlow"""
-    today: date = date.today()
     current_datetime: datetime = datetime.now()
     current_timestamp: float = current_datetime.timestamp()
-
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
-    logger: logging.Logger = logging.getLogger(__name__)
-
     logger.info(f"\n\nRetrieving data from path {PREFILTERED_DATA_PATH}")
 
     data_collection: tuple[
@@ -161,11 +159,6 @@ def coxph() -> None:
 def non_nested_coxph() -> None:
     """Full model with Sksurv Cox-Lasso, using Optuna and MLFlow,
     but non-nested"""
-    today: date = date.today()
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-    )
-    logger: logging.Logger = logging.getLogger(__name__)
 
     logger.info(f"\n\nRetrieving data from path {PREFILTERED_DATA_PATH}")
 

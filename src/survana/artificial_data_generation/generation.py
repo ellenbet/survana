@@ -81,12 +81,12 @@ def _make_artificial_features(
     The artificial features will be concatenated to the original dataset.
 
     Args:
-    X (np.ndarray): X.shape = (n_repeats, n_features), the input array
+        X (np.ndarray): X.shape = (n_repeats, n_features), the input array
 
-    artificial_type (ArtificialType) : defaults to KNOCKOFF
+        artificial_type (ArtificialType) : defaults to KNOCKOFF
 
-    n_artificial_features (int): number of artificial features to generate,
-    defaults to 0, set to n_features if n_artificial = 0.
+        n_artificial_features (int): number of artificial features to generate,
+        defaults to 0, set to n_features if n_artificial = 0.
 
     Returns:
     X_out (np.ndarray):

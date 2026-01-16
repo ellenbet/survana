@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
+from config import COEF_ZERO_CUTOFF, LOG_LAMBDA_MAX, LOG_LAMBDA_MIN
+
 
 class Result:
     """Result class to compute frequencies per resulting
@@ -25,10 +27,10 @@ class Result:
     def __init__(
         self,
         feature_names: np.ndarray | list[str],
-        rounding_cutoff: int = 5,
+        rounding_cutoff: int = COEF_ZERO_CUTOFF,
         coefficient_number_cutoff: int | None = None,
-        bin_min: int = -8,
-        bin_max: int = 1,
+        bin_min: int = LOG_LAMBDA_MIN,
+        bin_max: int = LOG_LAMBDA_MAX,
         bin_res: int = 10,
     ) -> None:
         assert all(

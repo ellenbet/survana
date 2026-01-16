@@ -1,8 +1,14 @@
 # functions for loading our data
+import logging
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def load_data_for_sksurv_coxnet(
@@ -29,6 +35,7 @@ def load_data_for_sksurv_coxnet(
         np.dtype[Any]]]: data plus design matrix and response
     """
     data: pd.DataFrame = pd.read_csv(path, sep=separator)
+    logging.info(f"Found data from path {path}")
     X: pd.DataFrame = data.iloc[:, 2:-2]
     y: np.recarray[tuple[Any, ...], np.dtype[np.float64]] = data.iloc[
         :, -2:

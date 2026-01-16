@@ -44,8 +44,8 @@ def test_result_dict(
         c: int = result.results[feature_name, hyperparam[0]]["count"]
         assert o == true_freq, (
             f"Expected occurence to be {true_freq}"
-            f"for {feature_name}, got"
-            f"{o} "
+            f" for {feature_name}, got"
+            f" {o} "
             "instead."
         )
 
@@ -69,7 +69,7 @@ def test_occurence_increase(
     result.save_results(hyperparam[0], coefs)
     result.save_results(hyperparam[0], coefs)
     o_1 = result.results[("1", hyperparam[0])]["occurence"]
-    assert o_1 == 2, "true 1 occurence failed, got " + f"{o_1}"
+    assert o_1 == 2, "true 1 occurence failed, got " + f" {o_1}"
     assert (
         result.results[("1", hyperparam[0])]["count"] == 2
     ), "true 1 count failed"
