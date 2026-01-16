@@ -8,9 +8,6 @@ import sksurv.linear_model as lm
 
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
-from survana.data_processing.result_models import Result
-
-from .training_wrappers import robust_train
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -234,49 +231,3 @@ def mlflow_non_nested_objective_artificial(
         mlflow.log_param("lambda", params["lambda"])
         mlflow.log_metric("c-index", score)
         return score
-
-
-def stability_objective(
-    trial,
-    X: np.ndarray[tuple[Any, ...], np.dtype[Any]],
-    y: np.recarray[tuple[Any, ...], np.dtype[np.float64]],
-    results: Result,
-    train_ind: list[int],
-    test_ind: list[int],
-) -> float | Any:
-
-    params: dict[str, Any] = {
-        "lambda": trial.suggest_float("lambda", 1e-5, 1e1, log=True)
-    }
-
-    model: lm.CoxPHSurvivalAnalysis | float = robust_train(
-        "lasso", X, y, params["lambda"], train_ind
-    )
-
-    if isinstance(model, float):
-        return model
-    else:
-        return model.score(X[test_ind, :], y=y[test_ind])
-
-
-def categorical_stability_objective(
-    trial,
-    X: np.ndarray[tuple[Any, ...], np.dtype[Any]],
-    y: np.recarray[tuple[Any, ...], np.dtype[np.float64]],
-    results: Result,
-    train_ind: list[int],
-    test_ind: list[int],
-) -> float | Any:
-
-    params: dict[str, Any] = {
-        "lambda": trial.suggest_categorical("lambda", results._names)
-    }
-
-    model: lm.CoxPHSurvivalAnalysis | float = robust_train(
-        "lasso", X, y, params["lambda"], train_ind
-    )
-
-    if isinstance(model, float):
-        return model
-    else:
-        return model.score(X[test_ind, :], y=y[test_ind])

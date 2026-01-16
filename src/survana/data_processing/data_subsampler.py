@@ -12,6 +12,8 @@ from sklearn.model_selection import (
     StratifiedShuffleSplit,
 )
 
+from config import RSKF_REPEATS, RSKF_SPLITS, SKF_SPLITS
+
 logger: logging.Logger = logging.getLogger(__name__)
 
 
@@ -108,7 +110,7 @@ class Subsampler:
 def stratified_kfold_splits(
     X: pd.DataFrame,
     y: np.recarray[tuple[Any, ...], np.dtype[np.float64]],
-    n_splits: int = 5,
+    n_splits: int = SKF_SPLITS,
     random_state=None,
     shuffle: bool = False,
 ) -> Iterator[Any]:  # type: ignore
@@ -119,7 +121,8 @@ def stratified_kfold_splits(
             design matrix..
         y (np.recarray[tuple[Any, ...], np.dtype[np.float64]]):
             response variable.
-        n_splits (int, optional): amount of split for cv. Defaults to 5.
+        n_splits (int, optional): amount of split for cv.
+            Defaults to SKF_SPLITS (see config.py)
         random_state (_type_, optional): random state. Defaults to None.
         shuffle (bool): Defaults to False.
 
@@ -141,8 +144,8 @@ def stratified_kfold_splits(
 def stratified_repeated_kfold_splits(
     X: pd.DataFrame | pd.Series,
     y: np.recarray[tuple[Any, ...], np.dtype[np.float64]],
-    n_repeats: int = 2,
-    n_splits: int = 5,
+    n_repeats: int = RSKF_REPEATS,
+    n_splits: int = RSKF_SPLITS,
     random_state=None,
 ) -> Iterator[Any]:  # type: ignore
     """Makes a stratified repeated k fold splitting iterator for X and y
@@ -152,8 +155,10 @@ def stratified_repeated_kfold_splits(
         y (np.recarray[tuple[Any, ...], np.dtype[np.float64]]):
             response variable.
         n_repeats (int, optional):
-            amount of repeats for repeated kfold. Defaults to 2.
-        n_splits (int, optional): amount of split for cv. Defaults to 5.
+            amount of repeats for repeated kfold.
+            Defaults to RSKF_REPEATS (see config.py).
+        n_splits (int, optional): amount of split for cv.
+            Defaults to RSKF_SPLITS (see config.py)
         random_state (_type_, optional): random state. Defaults to None.
 
     Returns:
