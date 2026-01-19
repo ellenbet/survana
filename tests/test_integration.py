@@ -4,11 +4,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
-from data_processing.result import Result
 from sksurv.linear_model.coxph import CoxPHSurvivalAnalysis
 
 from survana.artificial_data_generation.generation import ArtificialGenerator
 from survana.artificial_data_generation.methods import ArtificialType
+from survana.data_processing.result import Result
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -37,16 +37,16 @@ def test_tiny_integration(
     model.fit(art_X, y)
     results: Result = Result(feature_names + artificial_names)
 
-    results.save_results(model.alpha, model.coef_)
-    results.save_results(model.alpha, model.coef_)
-    results.save_results(model.alpha, model.coef_)
+    results.save_results(0.5, model.alpha, model.coef_)
+    results.save_results(0.5, model.alpha, model.coef_)
+    results.save_results(0.5, model.alpha, model.coef_)
 
     try:
         logger.info(results.get_long_result_df())
     except AssertionError:
         pass
 
-    results.save_results(0.1, model.coef_)
+    results.save_results(0.5, 0.1, model.coef_)
     logger.info(results.get_long_result_df())
     logger.info(results.get_results())
 
@@ -76,4 +76,4 @@ def test_artificial_integration(
     model.fit(art_X, y)
 
     results: Result = Result(feature_names + artificial_names)
-    results.save_results(model.alpha, model.coef_)
+    results.save_results(0.5, model.alpha, model.coef_)
