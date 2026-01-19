@@ -2,6 +2,7 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import pytest
 
 from survana.data_processing.result import Result
@@ -148,8 +149,8 @@ def test_result_names(
     pytest.fail("Non-str name allowed in result")
 
 
-def test_plot_results(
-    monkeypatch,
+def test_save_and_plot_results(
+    monkeypatch: pytest.MonkeyPatch,
     test_result_data: tuple[
         list[int],
         list[str],
@@ -159,12 +160,16 @@ def test_plot_results(
     ],
 ) -> None:
     monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
+    monkeypatch.setattr(plt, "savefig", lambda *args, **kwargs: None)
+    monkeypatch.setattr(pd.DataFrame, "to_csv", lambda *args, **kwargs: None)
     true_int, true_str, fake_str, coefs, hyperparam = test_result_data
-    result: Result = Result(true_str)
+    result: Result = Result(true_str, bin_min=-2, bin_max=1)
     result.save_results(0.5, hyperparam[0], coefs)
     result.save_results(0.5, hyperparam[1], coefs)
     result.save_results(0.5, hyperparam[2], coefs)
-    result.plot_results()
+    result.get_results_file()
+    result.plot_stability_path()
+    result.plot_average_scores()
 
 
 def test_hyperparam_checker(
@@ -205,7 +210,7 @@ def test_failure_plot_results(
     true_int, true_str, fake_str, coefs, hyperparam = test_result_data
     result: Result = Result(true_str)
     try:
-        result.plot_results()
+        result.plot_stability_path()
     except AssertionError:
         return None
 

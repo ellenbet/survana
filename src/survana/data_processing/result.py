@@ -1,3 +1,4 @@
+import logging
 from collections import defaultdict
 from typing import Any
 
@@ -6,6 +7,11 @@ import pandas as pd
 from matplotlib import pyplot as plt
 
 from config import COEF_ZERO_CUTOFF, LOG_LAMBDA_MAX, LOG_LAMBDA_MIN
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class Result:
@@ -42,6 +48,7 @@ class Result:
             lambda: {"occurence": 0, "count": 0, "accumulated_score": 0.0}
         )
         self.feature_names: list[str] = feature_names
+        self.trial_name: str = f"log(lambda)_{bin_min}_to_{bin_max}_results_"
         self.rounding_cutoff: int = rounding_cutoff
         self.bin_max: int = bin_max
         self.bin_min: int = bin_min
@@ -102,14 +109,21 @@ class Result:
 
     def get_results_file(self) -> None:
         long_df = self.get_long_result_df()
-        long_df.to_csv(
-            f"log(lambda)_{self.bin_min}_to_{self.bin_max}_results_df.csv"
-        )
+        long_df.to_csv(f"{self.trial_name}_df.csv")
+        self.long_df: pd.DataFrame = long_df
 
-    def plot_results(self) -> None:
+    def plot_stability_path(self) -> None:
         """Method that plots stability paths"""
         assert len(self.results) > 1, "Results dict empty or 1"
-        long_df = self.get_long_result_df()
+        try:
+            long_df = self.long_df
+        except AttributeError:
+            logger.info(
+                "Result dataframe undefined, consider saving results in file"
+                " before plotting"
+            )
+            long_df = self.get_long_result_df()
+
         wide_df = long_df.pivot(
             index="hyperparam", columns="feature", values="freq"
         )
@@ -122,6 +136,35 @@ class Result:
         plt.xscale("log")
         plt.xlabel(r"(1 / λ)-bins")
         plt.ylabel(r"feature selection frequency(θ)")
+        plt.savefig(
+            f"result_figs/{self.trial_name}stability_path.pdf",
+            bbox_inches="tight",
+        )
+        plt.show()
+
+    def plot_average_scores(self):
+        """Method that plots average C-index across bins"""
+        assert len(self.results) > 1, "Results dict empty or 1"
+        try:
+            long_df: pd.DataFrame = self.long_df
+        except AttributeError:
+            logger.info(
+                "Result dataframe undefined, consider saving results in file"
+                " before plotting"
+            )
+            long_df = self.get_long_result_df()
+        sorted_indexes: np.ndarray = np.argsort(long_df["hyperparam"])
+        plt.plot(
+            long_df["hyperparam"][sorted_indexes],
+            long_df["average_score"][sorted_indexes],
+        )
+        plt.xscale("log")
+        plt.xlabel(r"$\lambda$")
+        plt.ylabel("C-index")
+        plt.savefig(
+            f"result_figs/{self.trial_name}scores.pdf",
+            bbox_inches="tight",
+        )
         plt.show()
 
     def _above_cutoff(self, x: float) -> int:

@@ -88,4 +88,5 @@ def stability_selection():
                 results.save_results(score, param, model.coef_.flatten())
                 logger.info(f"param: {param} with score: " + f"{score}")
         results.get_results_file()
-    results.plot_results()
+    results.plot_stability_path()
+    results.plot_average_scores()
