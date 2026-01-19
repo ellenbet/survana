@@ -26,9 +26,8 @@ class Result:
 
     def __init__(
         self,
-        feature_names: np.ndarray | list[str],
+        feature_names: list[str],
         rounding_cutoff: int = COEF_ZERO_CUTOFF,
-        coefficient_number_cutoff: int | None = None,
         bin_min: int = LOG_LAMBDA_MIN,
         bin_max: int = LOG_LAMBDA_MAX,
         bin_res: int = 10,
@@ -37,17 +36,20 @@ class Result:
             isinstance(name, str) for name in feature_names
         ), "feature names must be str"
 
-        self.results: dict[tuple[str, float], dict[str, int]] = defaultdict(
-            lambda: {"occurence": 0, "count": 0}
+        self.results: dict[
+            tuple[str, float], dict[str, int | float]
+        ] = defaultdict(
+            lambda: {"occurence": 0, "count": 0, "accumulated_score": 0.0}
         )
-        self.feature_names = feature_names
-        self.rounding_cutoff = rounding_cutoff
-        self.coefficient_number_cutoff: int | None = coefficient_number_cutoff
-        self.bin_max = bin_max
-        self.bin_min = bin_min
+        self.feature_names: list[str] = feature_names
+        self.rounding_cutoff: int = rounding_cutoff
+        self.bin_max: int = bin_max
+        self.bin_min: int = bin_min
         self._hyperparam_bin_configuration(bin_min, bin_max, bin_res)
 
-    def save_results(self, hyperparam: float, all_coefs: np.ndarray) -> None:
+    def save_results(
+        self, score: float, hyperparam: float, all_coefs: np.ndarray
+    ) -> None:
         """Method that saves feature selection frequency by defining all
         non-zero features as selected. Non-zero cutoff is defined by
         rounding_cutoff attribute.
@@ -61,9 +63,12 @@ class Result:
             self.results[(feature_name, hyperparam_bin)][
                 "occurence"
             ] += self._above_cutoff(coef)
+            self.results[(feature_name, hyperparam_bin)][
+                "accumulated_score"
+            ] += score
             self.results[(feature_name, hyperparam_bin)]["count"] += 1
 
-    def get_results(self) -> dict[tuple[str, float], dict[str, int]]:
+    def get_results(self) -> dict[tuple[str, float], dict[str, int | float]]:
         """Result method asserts length of both result objects are
         equal before returning results.
 
@@ -81,6 +86,7 @@ class Result:
                     "feature": feature,
                     "hyperparam": hyperparam_bin,
                     "occurence": stats["occurence"],
+                    "accumulated_score": stats["accumulated_score"],
                     "count": stats["count"],
                 }
                 for (feature, hyperparam_bin), stats in self.results.items()
@@ -88,11 +94,17 @@ class Result:
         )
 
         long_df["freq"] = long_df["occurence"] / long_df["count"]
+        long_df["average_score"] = (
+            long_df["accumulated_score"] / long_df["count"]
+        )
+
         return long_df
 
     def get_results_file(self) -> None:
         long_df = self.get_long_result_df()
-        long_df.to_csv("results_df.csv")
+        long_df.to_csv(
+            f"log(lambda)_{self.bin_min}_to_{self.bin_max}_results_df.csv"
+        )
 
     def plot_results(self) -> None:
         """Method that plots stability paths"""
@@ -141,8 +153,8 @@ class Result:
         Returns:
             float: name of bin
         """
-        log_hyp = np.log10(hyperparam)
-        assert log_hyp >= self.bin_min and hyperparam <= self.bin_max, [
+        log_hyp: float = np.log10(hyperparam)
+        assert log_hyp >= self.bin_min and log_hyp <= self.bin_max, [
             f"non-valid log(hyperparameter) {log_hyp}, must be between "
             + f"{self.bin_min} and {self.bin_max}"
         ]

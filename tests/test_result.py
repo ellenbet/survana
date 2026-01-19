@@ -3,8 +3,7 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pytest
-
-from survana.data_processing.result_models import Result
+from data_processing.result import Result
 
 
 def test_result_dict(

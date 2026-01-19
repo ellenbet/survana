@@ -4,11 +4,11 @@ from typing import Any
 import numpy as np
 import pandas as pd
 import pytest
+from data_processing.result import Result
 from sksurv.linear_model.coxph import CoxPHSurvivalAnalysis
 
 from survana.artificial_data_generation.generation import ArtificialGenerator
 from survana.artificial_data_generation.methods import ArtificialType
-from survana.data_processing.result_models import Result
 
 logger: logging.Logger = logging.getLogger(__name__)
 

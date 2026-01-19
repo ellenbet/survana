@@ -23,7 +23,7 @@ from survana.artificial_data_generation.methods import ArtificialType
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
-from survana.data_processing.result_models import Result
+from survana.data_processing.result import Result
 from survana.tuning.training_wrappers import robust_train
 
 logging.basicConfig(
@@ -82,10 +82,10 @@ def stability_selection():
             if isinstance(model, float):
                 pass
             else:
-                results.save_results(param, model.coef_.flatten())
-                logger.info(
-                    f"param: {param} with score: "
-                    + f"{model.score(art_X[test, :], y=sksurv_data.y[test])}"
+                score: float | Any = model.score(
+                    art_X[test, :], y=sksurv_data.y[test]
                 )
+                results.save_results(score, param, model.coef_.flatten())
+                logger.info(f"param: {param} with score: " + f"{score}")
         results.get_results_file()
     results.plot_results()

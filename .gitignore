@@ -438,3 +438,7 @@ build/
 site/
 *.egg-info/
 .eggs/
+
+# Result files
+*results_df.csv
+result_csv/
