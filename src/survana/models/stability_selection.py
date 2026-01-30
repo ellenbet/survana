@@ -1,4 +1,5 @@
 import logging
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -6,25 +7,32 @@ import pandas as pd
 import sksurv.linear_model as lm
 import tqdm
 
-from config import (
-    CENSOR_STATUS,
-    COEF_ZERO_CUTOFF,
-    LOG_LAMBDA_MAX,
-    LOG_LAMBDA_MIN,
-    MODEL_TYPE,
-    MONTHS_BEFORE_EVENT,
-    N_LAMBDA,
-    PREFILTERED_DATA_PATH,
-    RSKF_REPEATS,
-    RSKF_SPLITS,
-)
 from survana.artificial_data_generation.generation import ArtificialGenerator
 from survana.artificial_data_generation.methods import ArtificialType
+from survana.config import CONFIG, PATHS
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
 from survana.data_processing.result import Result
 from survana.tuning.training_wrappers import robust_train
+
+CENSOR_STATUS: str = CONFIG["columns"]["censor_status"]
+COXPH_EXPERIMENT_ID: str = CONFIG["experiments"]["coxph_experiment_id"]
+COXPH_NON_NESTED_EXPERIMENT_ID = CONFIG["experiments"][
+    "coxph_non_nested_experiment_id"
+]
+MONTHS_BEFORE_EVENT: str = CONFIG["columns"]["months_before_event"]
+N_TRIALS: int = CONFIG["tuning"]["n_trials"]
+RSKF_REPEATS: int = CONFIG["tuning"]["rskf_repeats"]
+RSKF_SPLITS: int = CONFIG["tuning"]["rskf_splits"]
+SKF_SPLITS: int = CONFIG["tuning"]["skf_splits"]
+COEF_ZERO_CUTOFF: int = CONFIG["tuning"]["coef_zero_cutoff"]
+LOG_LAMBDA_MAX: int = CONFIG["tuning"]["log_lambda_max"]
+LOG_LAMBDA_MIN: int = CONFIG["tuning"]["log_lambda_min"]
+MODEL_TYPE: str = CONFIG["model"]["model_type"]
+N_LAMBDA: int = CONFIG["tuning"]["n_lambda"]
+PREFILTERED_DATA_PATH: Path = PATHS["PREFILTERED_DATA_PATH"]
+RESULT_FIGURES_DATA_PATH: Path = PATHS["RESULT_FIGURES_DATA_PATH"]
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -65,6 +73,12 @@ def stability_selection():
         f"artificial_{i}" for i in range(feature_no)
     ]
 
+    logger.info(
+        "starting stability selectiont trial with"
+        + f"\nLOG_LAMBDA_MIN: {LOG_LAMBDA_MIN}"
+        + f"\nLOG_LAMBDA_MAX: {LOG_LAMBDA_MAX}"
+        + f"\nN_LAMBDA: {N_LAMBDA}"
+    )
     params: np.ndarray = np.logspace(LOG_LAMBDA_MIN, LOG_LAMBDA_MAX, N_LAMBDA)
     results: Result = Result(
         feature_names + artificial_names,
@@ -87,6 +101,6 @@ def stability_selection():
                 )
                 results.save_results(score, param, model.coef_.flatten())
                 logger.info(f"param: {param} with score: " + f"{score}")
+
         results.get_results_file()
     results.plot_stability_path()
-    results.plot_average_scores()

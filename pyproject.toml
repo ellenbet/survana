@@ -41,3 +41,6 @@ include = ["src/survana/py.typed"]
 [tool.pytest.ini_options]
 log_cli = true
 log_cli_level = "INFO"
+
+#[tool.setuptools.package-data]
+#survana = ["data/*"] #ship with data

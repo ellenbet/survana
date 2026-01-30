@@ -1,6 +1,7 @@
 import logging
 from datetime import date, datetime
 from functools import partial
+from pathlib import Path
 from typing import Any
 
 import mlflow
@@ -11,18 +12,7 @@ import sksurv.linear_model as lm
 from matplotlib import pyplot as plt
 from mlflow.entities.experiment import Experiment
 
-from config import (
-    CENSOR_STATUS,
-    COXPH_EXPERIMENT_ID,
-    COXPH_NON_NESTED_EXPERIMENT_ID,
-    MONTHS_BEFORE_EVENT,
-    N_TRIALS,
-    PREFILTERED_DATA_PATH,
-    RESULT_FIGURES_DATA_PATH,
-    RSKF_REPEATS,
-    RSKF_SPLITS,
-    SKF_SPLITS,
-)
+from survana.config import CONFIG, PATHS
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
@@ -30,6 +20,19 @@ from survana.tuning.optuna_objectives import (
     mlflow_non_nested_objective_with_args,
     mlflow_sksurv_objective_with_args,
 )
+
+CENSOR_STATUS: str = CONFIG["columns"]["censor_status"]
+COXPH_EXPERIMENT_ID: str = CONFIG["experiments"]["coxph_experiment_id"]
+COXPH_NON_NESTED_EXPERIMENT_ID = CONFIG["experiments"][
+    "coxph_non_nested_experiment_id"
+]
+MONTHS_BEFORE_EVENT: str = CONFIG["columns"]["months_before_event"]
+N_TRIALS: int = CONFIG["tuning"]["n_trials"]
+RSKF_REPEATS: int = CONFIG["tuning"]["rskf_repeats"]
+RSKF_SPLITS: int = CONFIG["tuning"]["rskf_splits"]
+SKF_SPLITS: int = CONFIG["tuning"]["skf_splits"]
+PREFILTERED_DATA_PATH: Path = PATHS["PREFILTERED_DATA_PATH"]
+RESULT_FIGURES_DATA_PATH: Path = PATHS["RESULT_FIGURES_DATA_PATH"]
 
 today: date = date.today()
 logging.basicConfig(

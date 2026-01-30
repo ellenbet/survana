@@ -12,7 +12,12 @@ from sklearn.model_selection import (
     StratifiedShuffleSplit,
 )
 
-from config import MCCV_SPLITS, RSKF_REPEATS, RSKF_SPLITS, SKF_SPLITS
+from survana.config import CONFIG
+
+MCCV_SPLITS: int = CONFIG["tuning"]["mccv_splits"]
+RSKF_REPEATS: int = CONFIG["tuning"]["rskf_repeats"]
+RSKF_SPLITS: int = CONFIG["tuning"]["rskf_splits"]
+SKF_SPLITS: int = CONFIG["tuning"]["skf_splits"]
 
 logger: logging.Logger = logging.getLogger(__name__)
 

@@ -6,7 +6,13 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 
-from config import COEF_ZERO_CUTOFF, LOG_LAMBDA_MAX, LOG_LAMBDA_MIN
+from survana.config import CONFIG
+
+COEF_ZERO_CUTOFF, LOG_LAMBDA_MAX, LOG_LAMBDA_MIN = (
+    CONFIG["tuning"]["coef_zero_cutoff"],
+    CONFIG["tuning"]["log_lambda_max"],
+    CONFIG["tuning"]["log_lambda_min"],
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -109,7 +115,7 @@ class Result:
 
     def get_results_file(self) -> None:
         long_df = self.get_long_result_df()
-        long_df.to_csv(f"{self.trial_name}_df.csv")
+        long_df.to_csv(f"result_csv/{self.trial_name}_df.csv")
         self.long_df: pd.DataFrame = long_df
 
     def plot_stability_path(self) -> None:

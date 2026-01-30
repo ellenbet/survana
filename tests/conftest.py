@@ -5,8 +5,10 @@ import pandas as pd
 import pytest
 import sksurv.linear_model as lm
 
-from config import PREFILTERED_DATA_PATH
+from survana.config import PATHS
 from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
+
+PREFILTERED_DATA_PATH = PATHS["PREFILTERED_DATA_PATH"]
 
 
 @pytest.fixture

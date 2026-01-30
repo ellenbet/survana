@@ -1,0 +1,33 @@
+# config.toml
+
+[paths]
+base_dir = "."
+result_figures_data_path = "result_figs"
+src_path = "src"
+data_path = "data"
+prefiltered_data_path = "data/stand_knn_features_variance1000.tsv"
+clinical_data_path = "data/data_clinical_patient.txt"
+
+[columns]
+censor_status = "RFS_STATUS"
+months_before_event = "RFS_MONTHS"
+patient_id = "PATIENT_ID"
+
+[experiments]
+coxph_experiment_id = "coxph"
+coxph_non_nested_experiment_id = "non-nested coxph"
+
+[tuning]
+skf_splits = 5
+rskf_splits = 5
+rskf_repeats = 10
+mccv_splits = 10
+coef_zero_cutoff = 4
+n_trials = 100
+log_lambda_min = -8
+log_lambda_max = 1
+n_lambda = 100
+
+[model]
+model_iterations = 100
+model_type = "lasso"

@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from config import CENSOR_STATUS
+from survana.config import CONFIG
+
+CENSOR_STATUS = CONFIG["columns"]["censor_status"]
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -22,12 +24,6 @@ class SksurvData(BaseModel):
     Upon initialization, the model computes several derived attributes,
     including `data`, `X`, `y`, `censored_patients_percentage`,
     `y_censored`, and `y_survival`.
-
-    The class also provides convenience methods for generating
-    stratified cross-validation split iterators, including standard
-    `StratifiedKFold` and `RepeatedStratifiedKFold`. Additionally,
-    it provides a utility to extract the most influential features
-    from model coefficients.
 
     Attributes:
         data (pd.DataFrame):

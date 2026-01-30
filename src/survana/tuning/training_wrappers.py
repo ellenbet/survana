@@ -5,7 +5,9 @@ import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
 
-from config import MODEL_ITERATIONS
+from survana.config import CONFIG
+
+MODEL_ITERATIONS: int = CONFIG["model"]["model_iterations"]
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
