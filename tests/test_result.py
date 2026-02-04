@@ -1,3 +1,5 @@
+import logging
+from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
@@ -5,7 +7,10 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from survana.data_processing.result import Result
+from survana.result_processing.plotting import Plotter
+from survana.result_processing.result import Result
+
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def test_result_dict(
@@ -167,9 +172,6 @@ def test_save_and_plot_results(
     result.save_results(0.5, hyperparam[0], coefs)
     result.save_results(0.5, hyperparam[1], coefs)
     result.save_results(0.5, hyperparam[2], coefs)
-    result.get_results_file()
-    result.plot_stability_path()
-    result.plot_average_scores()
 
 
 def test_hyperparam_checker(
@@ -196,22 +198,14 @@ def test_hyperparam_checker(
     pytest.fail("Failed to catch invalid hyperparam value")
 
 
-def test_failure_plot_results(
+def test_plotter_plot_results(
     monkeypatch,
-    test_result_data: tuple[
-        list[int],
-        list[str],
-        list[str],
-        np.ndarray[tuple[Any, ...], np.dtype[Any]],
-        list[float],
-    ],
+    test_result: Path,
 ) -> None:
     monkeypatch.setattr(plt, "show", lambda *args, **kwargs: None)
-    true_int, true_str, fake_str, coefs, hyperparam = test_result_data
-    result: Result = Result(true_str)
-    try:
-        result.plot_stability_path()
-    except AssertionError:
-        return None
-
-    pytest.fail("Failed to catch empty result plotting")
+    plotter = Plotter(test_result)
+    plotter.plot_stability_path()
+    plotter.plot_top_exponent()
+    plotter.plot_top_freq_dist()
+    plotter.plot_min_fdr()
+    plotter.plot_stability_path_with_thresh()

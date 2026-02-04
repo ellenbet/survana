@@ -7,6 +7,8 @@ src_path = "src"
 data_path = "data"
 prefiltered_data_path = "data/stand_knn_features_variance1000.tsv"
 clinical_data_path = "data/data_clinical_patient.txt"
+result_csv_data_path= "result_csv"
+
 
 [columns]
 censor_status = "RFS_STATUS"

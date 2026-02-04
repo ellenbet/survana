@@ -8,7 +8,7 @@ import pandas as pd
 
 from survana.config import PATHS
 
-DATA_PATH: Path = PATHS["DATA_PATH"]
+PREFILTERED_DATA_PATH: Path = PATHS["PREFILTERED_DATA_PATH"]
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -56,7 +56,7 @@ def load_data_for_sksurv_coxnet(
 
 def load_partial_data_for_sksurv_coxnet(
     selected_features: list[str],
-    path: str = str(DATA_PATH),
+    path: str = str(PREFILTERED_DATA_PATH),
     separator: str = "\t",
     response_variables: tuple[str, str] = ("RFS_STATUS", "RFS_MONTHS"),
 ) -> tuple[

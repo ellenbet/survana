@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -14,6 +15,11 @@ PREFILTERED_DATA_PATH = PATHS["PREFILTERED_DATA_PATH"]
 @pytest.fixture
 def test_data() -> pd.DataFrame:
     return pd.read_csv("test_data/test_matrix.csv", index_col="tests")
+
+
+@pytest.fixture
+def test_result() -> Path:
+    return Path("test_data/log(lambda)_-5_to_1_results__df.csv")
 
 
 @pytest.fixture

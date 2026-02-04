@@ -6,6 +6,8 @@ import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
 import tqdm
+from result_processing.plotting import Plotter
+from result_processing.result import Result
 
 from survana.artificial_data_generation.generation import ArtificialGenerator
 from survana.artificial_data_generation.methods import ArtificialType
@@ -13,7 +15,6 @@ from survana.config import CONFIG, PATHS
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
-from survana.data_processing.result import Result
 from survana.tuning.training_wrappers import robust_train
 
 CENSOR_STATUS: str = CONFIG["columns"]["censor_status"]
@@ -102,5 +103,7 @@ def stability_selection():
                 results.save_results(score, param, model.coef_.flatten())
                 logger.info(f"param: {param} with score: " + f"{score}")
 
-        results.get_results_file()
-    results.plot_stability_path()
+        results.save_results_to_file()
+    plotter: Plotter = Plotter(results.get_result_path())
+    plotter.plot_stability_path(save=True)
+    plotter.plot_stability_path_with_thresh(save=True)

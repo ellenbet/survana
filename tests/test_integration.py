@@ -8,7 +8,7 @@ from sksurv.linear_model.coxph import CoxPHSurvivalAnalysis
 
 from survana.artificial_data_generation.generation import ArtificialGenerator
 from survana.artificial_data_generation.methods import ArtificialType
-from survana.data_processing.result import Result
+from survana.result_processing.result import Result
 
 logger: logging.Logger = logging.getLogger(__name__)
 

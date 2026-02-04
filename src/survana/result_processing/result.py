@@ -1,12 +1,12 @@
 import logging
 from collections import defaultdict
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 
-from survana.config import CONFIG
+from survana.config import CONFIG, PATHS
 
 COEF_ZERO_CUTOFF, LOG_LAMBDA_MAX, LOG_LAMBDA_MIN = (
     CONFIG["tuning"]["coef_zero_cutoff"],
@@ -113,65 +113,19 @@ class Result:
 
         return long_df
 
-    def get_results_file(self) -> None:
+    def save_results_to_file(self) -> None:
+        """Saves result dataframe as .csv in result csv path set in
+        config.toml"""
         long_df = self.get_long_result_df()
-        long_df.to_csv(f"result_csv/{self.trial_name}_df.csv")
+        filename = f"{self.trial_name}_df.csv"
+        self.result_path: Path = PATHS["BASE_DIR"] / (
+            PATHS["RESULT_CSV_DATA_PATH"] / filename
+        )
+        long_df.to_csv(self.result_path)
         self.long_df: pd.DataFrame = long_df
 
-    def plot_stability_path(self) -> None:
-        """Method that plots stability paths"""
-        assert len(self.results) > 1, "Results dict empty or 1"
-        try:
-            long_df = self.long_df
-        except AttributeError:
-            logger.info(
-                "Result dataframe undefined, consider saving results in file"
-                " before plotting"
-            )
-            long_df = self.get_long_result_df()
-
-        wide_df = long_df.pivot(
-            index="hyperparam", columns="feature", values="freq"
-        )
-        wide_df = wide_df.copy()
-
-        wide_df.index = 1.0 / wide_df.index.astype(float)
-        wide_df = wide_df.sort_index()
-
-        wide_df.plot(legend=False)
-        plt.xscale("log")
-        plt.xlabel(r"(1 / λ)-bins")
-        plt.ylabel(r"feature selection frequency(θ)")
-        plt.savefig(
-            f"result_figs/{self.trial_name}stability_path.pdf",
-            bbox_inches="tight",
-        )
-        plt.show()
-
-    def plot_average_scores(self):
-        """Method that plots average C-index across bins"""
-        assert len(self.results) > 1, "Results dict empty or 1"
-        try:
-            long_df: pd.DataFrame = self.long_df
-        except AttributeError:
-            logger.info(
-                "Result dataframe undefined, consider saving results in file"
-                " before plotting"
-            )
-            long_df = self.get_long_result_df()
-        sorted_indexes: np.ndarray = np.argsort(long_df["hyperparam"])
-        plt.plot(
-            long_df["hyperparam"][sorted_indexes],
-            long_df["average_score"][sorted_indexes],
-        )
-        plt.xscale("log")
-        plt.xlabel(r"$\lambda$")
-        plt.ylabel("C-index")
-        plt.savefig(
-            f"result_figs/{self.trial_name}scores.pdf",
-            bbox_inches="tight",
-        )
-        plt.show()
+    def get_result_path(self) -> Path:
+        return self.result_path
 
     def _above_cutoff(self, x: float) -> int:
         """Private function to sett coefs to zero if below cutoff
