@@ -39,3 +39,8 @@ When making changes to repository, test continiously using command:
 To include full integration test, run command:
 
 ``pytest tests --slow``
+
+## Gradio:
+To run hot reloading gradio for front-end developement, use:
+
+``gradio src/survana/frontend/gradio_app.py``
