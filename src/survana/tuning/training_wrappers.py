@@ -2,7 +2,6 @@ import logging
 from typing import Any
 
 import numpy as np
-import pandas as pd
 import sksurv.linear_model as lm
 
 from survana.config import CONFIG
@@ -47,7 +46,7 @@ def robust_train(
     else:
         logger.error("No model type specified")
 
-    X_train = pd.DataFrame(X[train_ind, :])
+    X_train: np.ndarray[tuple[Any, ...], np.dtype[Any]] = X[train_ind]
     y_train: np.ndarray[tuple[Any, ...], np.dtype[np.float64]] = y[train_ind]
 
     try:

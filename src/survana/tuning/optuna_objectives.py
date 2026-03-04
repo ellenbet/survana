@@ -5,6 +5,7 @@ import mlflow
 import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
+from sksurv.ensemble import RandomSurvivalForest
 
 from survana.config import CONFIG
 from survana.data_processing.data_models import SksurvData
@@ -230,3 +231,64 @@ def mlflow_non_nested_objective_artificial(
         mlflow.log_param("lambda", params["lambda"])
         mlflow.log_metric("c-index", score)
         return score
+
+
+def random_survival_forest_objective(trial, X, y) -> np.floating[Any]:
+    param_grid: dict[str, int] = {
+        "n_estimators": trial.suggest_int("n_estimators", 50, 200),
+        "max_depth": trial.suggest_int("max_depth", 2, 32),
+        "min_samples_split": trial.suggest_int("min_samples_split", 2, 10),
+    }
+    splitter: Subsampler = Subsampler.kfold()
+    scores: list[float] = []
+    for train, test in splitter.split(X, y):
+        model = RandomSurvivalForest(
+            n_estimators=param_grid["n_estimators"],
+            max_depth=param_grid["max_depth"],
+            min_samples_split=param_grid["min_samples_split"],
+        )
+        model.fit(X.iloc[train, :], y[train])
+        score: float | Any = getattr(model, "score", 0.0)(
+            X.iloc[test, :], y[test]
+        )  # type: ignore
+        scores.append(score)
+    trial.set_user_attr("std_dev", np.std(scores))
+    return np.mean(scores)
+
+
+def cox_cv_objective(
+    trial,
+    X,
+    y,
+    min_alpha_log: int,
+    max_alpha_log: int,
+    n_repeats: int,
+    n_splits: int,
+    model_type: str = "ridge",
+) -> np.floating[Any]:
+    alpha: float = trial.suggest_float(
+        "alpha", 10**min_alpha_log, 10**max_alpha_log, log=True
+    )
+    splitter: Subsampler = Subsampler.repeated_kfold(
+        n_repeats=n_repeats, n_splits=n_splits
+    )
+    scores: list[float] = []
+    for train, test in splitter.split(X, y):
+        trained_model: (
+            lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float
+        ) = robust_train(
+            model_type=model_type,
+            X=X.to_numpy(),
+            y=y,
+            train_ind=train,
+            param=alpha,
+        )
+        # score: float = getattr(trained_model, "score", 0.0)(X.iloc[test, :], y[test])  # type: ignore # noqa: E501
+
+        if hasattr(trained_model, "score"):
+            score = trained_model.score(X.iloc[test, :], y[test])
+        else:
+            score = float(trained_model)
+        scores.append(score)
+    trial.set_user_attr("std_dev", np.std(scores))
+    return np.mean(scores)

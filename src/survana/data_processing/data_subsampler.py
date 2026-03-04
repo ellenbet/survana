@@ -39,6 +39,21 @@ class SubsamplingStrategy(StrEnum):
 
 
 class Subsampler:
+    """Initialized through Subsampler.name_of_chosen subsampling stratergy.
+    By calling split() method on
+    instance, you return the train and test indices.
+
+    To initialize:
+    - kfold = Subsampler.kfold(*args)
+    - repeated_kfold = Subsampler.repeated_kfold(*args)
+    - shuffle_split = Subsampler.shuffle_split(*args)
+
+    All of which stratifies the splits based on the hidden function
+    _get_y_cens() which takes in X and y and assumes that the censoring
+    status resides in the first column of the y recarray.
+
+    """
+
     def __init__(
         self,
         subsampling: SubsamplingStrategy,

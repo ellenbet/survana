@@ -30,6 +30,11 @@ dependencies = [
     "ipykernel>=7.1.0",
     "pytest-skip-slow>=0.0.5",
     "pytest-plt>=1.1.1",
+    "pyranges>=0.1.4",
+    "gradio>=6.5.1",
+    "watchfiles>=1.1.1",
+    "tomli-w>=1.2.0",
+    "lifelines>=0.30.1",
 ]
 
 [tool.hatch.build.targets.wheel]
