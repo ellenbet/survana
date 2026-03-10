@@ -283,8 +283,6 @@ def cox_cv_objective(
             train_ind=train,
             param=alpha,
         )
-        # score: float = getattr(trained_model, "score", 0.0)(X.iloc[test, :], y[test])  # type: ignore # noqa: E501
-
         if hasattr(trained_model, "score"):
             score = trained_model.score(X.iloc[test, :], y[test])
         else:

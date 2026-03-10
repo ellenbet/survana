@@ -5,21 +5,16 @@ from survana.config import CONFIG, PATHS
 
 
 def domain_filter(
-    raw_features_pth: str = "",
-    chrom_path: str = "",
-    unibind_path: str = "",
-    sep="\t",
+    raw_features_pth: str = str(PATHS["RAW_FEATURES_PATH"]),
+    sep=CONFIG["columns"]["sep"],
+    chrom_path: str = str(
+        PATHS["DATA_PATH"] / CONFIG["filter_filenames"]["chrom_hmm"]
+    ),
+    unibind_path: str = str(
+        PATHS["DATA_PATH"] / CONFIG["filter_filenames"]["unibind"]
+    ),
     save=False,
 ):
-
-    if not len(chrom_path):
-        chrom_path = str(
-            PATHS["DATA_PATH"] / CONFIG["filter_filenames"]["chrom_hmm"]
-        )
-        unibind_path = str(
-            PATHS["DATA_PATH"] / CONFIG["filter_filenames"]["unibind"]
-        )
-        raw_features_pth = str(PATHS["RAW_FEATURES_PATH"])
 
     assert (
         ".bed" in CONFIG["filter_filenames"]["chrom_hmm"]
@@ -54,12 +49,19 @@ def domain_filter(
         lambda row: "_".join(row.values.astype(str)), axis=1
     )
     feats = raw_features
-    feats.set_index(raw_features["chrom_start_end"], inplace=True)
+    feats.set_index(feats["chrom_start_end"], inplace=True)
     feats.pop("chrom_start_end")
+    feats.pop("chrom")
+    feats.pop("start")
+    feats.pop("end")
     domain_filtered_features = feats.loc[intersection]
+    df = domain_filtered_features.T
+    df.rename_axis(columns={"chrom_start_end": "patient_id"}, inplace=True)
 
     if save:
-        domain_filtered_features.to_csv(
-            PATHS["DATA_PATH"] / "domain_filtered_features.csv"
-        )
-    return domain_filtered_features
+        df.to_csv(PATHS["DATA_PATH"] / "domain_filtered_features.csv")
+    return df
+
+
+if __name__ == "__main__":
+    domain_filter(save=True)

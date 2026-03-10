@@ -1,4 +1,5 @@
 import logging
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -6,16 +7,21 @@ import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
 import tqdm
-from result_processing.plotting import Plotter
-from result_processing.result import Result
+from sklearn.exceptions import ConvergenceWarning
 
+# Ignore all ConvergenceWarnings
 from survana.artificial_data_generation.generation import ArtificialGenerator
 from survana.artificial_data_generation.methods import ArtificialType
 from survana.config import CONFIG, PATHS
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
+from survana.result_processing.plotting import Plotter
+from survana.result_processing.result import Result
 from survana.tuning.training_wrappers import robust_train
+
+warnings.simplefilter("ignore", category=ConvergenceWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 
 CENSOR_STATUS: str = CONFIG["columns"]["censor_status"]
 COXPH_EXPERIMENT_ID: str = CONFIG["experiments"]["coxph_experiment_id"]
@@ -32,13 +38,15 @@ LOG_LAMBDA_MAX: int = CONFIG["tuning"]["log_lambda_max"]
 LOG_LAMBDA_MIN: int = CONFIG["tuning"]["log_lambda_min"]
 MODEL_TYPE: str = CONFIG["model"]["model_type"]
 N_LAMBDA: int = CONFIG["tuning"]["n_lambda"]
-PREFILTERED_DATA_PATH: Path = PATHS["PREFILTERED_DATA_PATH"]
+PREFILTERED_DATA_PATH_VARIANCE: Path = PATHS["PREFILTERED_DATA_PATH_VARIANCE"]
 RESULT_FIGURES_DATA_PATH: Path = PATHS["RESULT_FIGURES_DATA_PATH"]
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
 logger: logging.Logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.CRITICAL,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    force=True,
+)
 
 
 def stability_selection():
@@ -55,7 +63,7 @@ def stability_selection():
     data_collection: tuple[
         pd.DataFrame, pd.DataFrame, np.recarray[tuple[Any, ...], np.dtype[Any]]
     ] = load_data_for_sksurv_coxnet(
-        str(PREFILTERED_DATA_PATH),
+        str(PREFILTERED_DATA_PATH_VARIANCE),
         response_variables=(CENSOR_STATUS, MONTHS_BEFORE_EVENT),
     )
 
@@ -79,6 +87,8 @@ def stability_selection():
         + f"\nLOG_LAMBDA_MIN: {LOG_LAMBDA_MIN}"
         + f"\nLOG_LAMBDA_MAX: {LOG_LAMBDA_MAX}"
         + f"\nN_LAMBDA: {N_LAMBDA}"
+        + f"\nN_CV_FOLDS: {RSKF_SPLITS}"
+        + f"\nN_REPEATS_IN_CV: {RSKF_REPEATS}"
     )
     params: np.ndarray = np.logspace(LOG_LAMBDA_MIN, LOG_LAMBDA_MAX, N_LAMBDA)
     results: Result = Result(
@@ -87,12 +97,25 @@ def stability_selection():
         bin_min=LOG_LAMBDA_MIN,
         bin_max=LOG_LAMBDA_MAX,
     )
-    for test, train in subsampler.split(art_X, sksurv_data.y):
-        for param in tqdm.tqdm(params):
+    for test, train in tqdm.tqdm(
+        subsampler.split(art_X, sksurv_data.y),
+        desc=f"{RSKF_SPLITS}-fold cross validation splits with {RSKF_REPEATS}"
+        + " repeats",
+        leave=False,
+        total=RSKF_SPLITS * RSKF_REPEATS,
+    ):
+        for param in tqdm.tqdm(
+            params,
+            leave=False,
+            desc=f"tuning on params 10^{LOG_LAMBDA_MIN} "
+            + f"to 10^{LOG_LAMBDA_MAX} per fold",
+        ):
             logger.info(f"Fitting model for hyperparam {param}")
             model: (
                 lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float
-            ) = robust_train(MODEL_TYPE, art_X, sksurv_data.y, param, train)
+            ) = robust_train(
+                MODEL_TYPE, art_X, sksurv_data.y, param, train, n_iter=200
+            )
 
             if isinstance(model, float):
                 pass
@@ -107,3 +130,5 @@ def stability_selection():
     plotter: Plotter = Plotter(results.get_result_path())
     plotter.plot_stability_path(save=True)
     plotter.plot_stability_path_with_thresh(save=True)
+    selected_features: list[str] = plotter.get_selected_features()
+    print(selected_features)

@@ -9,7 +9,7 @@ import sksurv.linear_model as lm
 from survana.config import PATHS
 from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
 
-PREFILTERED_DATA_PATH = PATHS["PREFILTERED_DATA_PATH"]
+PREFILTERED_DATA_PATH = PATHS["PREFILTERED_DATA_PATH_VARIANCE"]
 
 
 @pytest.fixture

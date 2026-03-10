@@ -1,7 +1,7 @@
 from enum import StrEnum
 
 import numpy as np
-from knockpy.knockoffs import GaussianSampler
+from knockpy.knockoffs import GaussianSampler  # type: ignore[import-untyped]
 from matplotlib.pylab import Generator
 
 
