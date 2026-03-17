@@ -425,7 +425,6 @@ FodyWeavers.xsd
 *.msp
 
 # Project specific ignores
-config.py
 mlruns/
 data/
 jupyter_explorations/
