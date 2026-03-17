@@ -72,5 +72,16 @@ def paths() -> dict[str, Path]:
     }
 
 
+def ensure_result_paths_exist() -> None:
+    for name, path in PATHS.items():
+        if "RESULT" not in name:
+            continue
+        if path.suffix:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        else:
+            path.mkdir(parents=True, exist_ok=True)
+
+
 CONFIG: dict[Any, Any] = load_config()
 PATHS: dict[str, Path] = paths()
+ensure_result_paths_exist()

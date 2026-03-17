@@ -97,10 +97,15 @@ def load_partial_data_for_sksurv_coxnet(
         tuple[pd.DataFrame, pd.DataFrame, np.recarray[tuple[Any, ...],
         np.dtype[Any]]]: data plus design matrix and response
     """
+
+    selected_true = [
+        feature for feature in selected_features if "artificial" not in feature
+    ]
+
     epigen_data: pd.DataFrame = pd.read_csv(
         path_to_epigenetic_features,
         index_col="PATIENT_ID",
-        usecols=["PATIENT_ID"] + selected_features,
+        usecols=["PATIENT_ID"] + selected_true,
     )
 
     epigen_data.set_index(epigen_data.columns[0])
