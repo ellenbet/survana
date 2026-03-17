@@ -39,7 +39,8 @@ def variance_filter(
 
     if save:
         df.to_csv(
-            PATHS["DATA_PATH"] / "variance_filtered_features_{cutoff}.csv"
+            path_or_buf=PATHS["PREFILTERED_DATA_PATH_VARIANCE"]
+            / f"variance_filtered_features_{cutoff}.csv"
         )
     return df
 

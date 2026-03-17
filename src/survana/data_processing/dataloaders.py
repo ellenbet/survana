@@ -1,15 +1,11 @@
 # functions for loading our data
 import logging
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 
 from survana.config import CONFIG, PATHS
-
-PREFILTERED_DATA_PATH: Path = PATHS["PREFILTERED_DATA_PATH"]
-CLINICAL_DATA_PATH: Path = PATHS["CLINICAL_DATA_PATH"]
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -18,11 +14,9 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 def load_data_for_sksurv_coxnet(
-    path_to_epigenetic_features: str = str(
-        PATHS["PREFILTERED_DATA_PATH_VARIANCE"]
-    ),
+    path_to_epigenetic_features: str = str(PATHS["PREFILTERED_DATA_PATH"]),
     path_to_clinical_data: str = str(PATHS["CLINICAL_DATA_PATH"]),
-    separator: str = "\t",
+    separator: str = CONFIG["columns"]["sep"],
     response_variables: tuple[str, str] = (
         CONFIG["columns"]["censor_status"],
         CONFIG["columns"]["months_before_event"],
@@ -47,6 +41,12 @@ def load_data_for_sksurv_coxnet(
         tuple[pd.DataFrame, pd.DataFrame, np.recarray[tuple[Any, ...],
         np.dtype[Any]]]: data plus design matrix and response
     """
+
+    logger.info(
+        f"Loading data from paths:\n{path_to_epigenetic_features}"
+        + f"\n{path_to_clinical_data}"
+    )
+    logger.info(f"Using response variables from columns: {response_variables}")
     epigen_data = pd.read_csv(path_to_epigenetic_features, index_col=0)
 
     clinical_data: pd.DataFrame = pd.read_csv(
@@ -57,6 +57,9 @@ def load_data_for_sksurv_coxnet(
     )
 
     data = pd.concat([epigen_data, clinical_data], axis=1, join="inner")
+    logger.info(
+        f"Starting selection with final design matrix shape {data.shape}"
+    )
 
     return generate_compatable_data_collection(
         data,
@@ -67,11 +70,9 @@ def load_data_for_sksurv_coxnet(
 
 def load_partial_data_for_sksurv_coxnet(
     selected_features: list[str],
-    path_to_epigenetic_features: str = str(
-        PATHS["PREFILTERED_DATA_PATH_VARIANCE"]
-    ),
+    path_to_epigenetic_features: str = str(PATHS["PREFILTERED_DATA_PATH"]),
     path_to_clinical_data: str = str(PATHS["CLINICAL_DATA_PATH"]),
-    separator: str = "\t",
+    separator: str = CONFIG["columns"]["sep"],
     response_variables: tuple[str, str] = (
         CONFIG["columns"]["censor_status"],
         CONFIG["columns"]["months_before_event"],
@@ -98,9 +99,11 @@ def load_partial_data_for_sksurv_coxnet(
     """
     epigen_data: pd.DataFrame = pd.read_csv(
         path_to_epigenetic_features,
-        index_col=0,
-        usecols=selected_features,
+        index_col="PATIENT_ID",
+        usecols=["PATIENT_ID"] + selected_features,
     )
+
+    epigen_data.set_index(epigen_data.columns[0])
 
     clinical_data: pd.DataFrame = pd.read_csv(
         path_to_clinical_data,
@@ -110,6 +113,7 @@ def load_partial_data_for_sksurv_coxnet(
     )
 
     data = pd.concat([epigen_data, clinical_data], axis=1, join="inner")
+    assert len(data) > 0, "DataFrame is empty, inner join has failed."
 
     return generate_compatable_data_collection(
         data,

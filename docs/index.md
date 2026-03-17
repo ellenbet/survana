@@ -46,11 +46,6 @@
     options:
       members_order: alphabetical
 
-::: src.survana.data_processing.result
-    handler: python
-    options:
-      members_order: alphabetical
-
 ::: src.survana.models
     handler: python
     options:

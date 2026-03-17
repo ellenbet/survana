@@ -8,6 +8,7 @@ from numpy import floating
 from optuna import Study
 from tqdm import tqdm
 
+from survana.config import CONFIG
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 from survana.tuning.optuna_objectives import (
@@ -41,8 +42,7 @@ def cox_final_tuning(
         results. Defaults to 2.
 
     Returns:
-        dict[str, dict[str, Any] | np.ndarray]:
-          dict with params dict, scores and std_dev-arrays.
+        dict[str, Any]: dict with params, scores and std_dev keys.
     """
     top_score: list[float] = []
     stds: list[float] = []
@@ -83,15 +83,16 @@ def cox_final_tuning(
 
 def coxph_final_tuning_optuna(
     data: SksurvData,
-    min_alpha_log=-10,
-    max_alpha_log=2,
-    n_trials: int = 50,
-    n_splits: int = 5,
-    n_repeats: int = 5,
+    min_alpha_log: int = CONFIG["tuning"]["log_lambda_min"],
+    max_alpha_log=CONFIG["tuning"]["log_lambda_max"],
+    n_trials: int = 20,
+    n_splits: int = CONFIG["tuning"]["rskf_splits"],
+    n_repeats: int = CONFIG["tuning"]["rskf_repeats"],
     model_type: str = "ridge",
 ) -> dict[str, dict[str, Any] | np.ndarray]:
     """Twin function to cox_final_tuning above but using
-    Optuna instead to compare results and efficiency.
+    Optuna instead to compare results and efficiency. Returns
+    hyperparameters with model score (c-index) and std.
 
     Args:
         data (SksurvData): full data
@@ -100,8 +101,7 @@ def coxph_final_tuning_optuna(
         n_trials (int, optional): number of optuna trials. Defaults to 50.
 
     Returns:
-        dict[str, dict[str, Any] | np.ndarray]:  dict with params dict,
-        scores and std_dev-arrays.
+        dict[str, Any]: dict with params, scores and std_dev keys.
     """
     study = optuna.create_study(direction="maximize")
     wrapped: partial[floating] = partial(

@@ -9,26 +9,20 @@ import sksurv.linear_model as lm
 import tqdm
 from sklearn.exceptions import ConvergenceWarning
 
-# Ignore all ConvergenceWarnings
 from survana.artificial_data_generation.generation import ArtificialGenerator
 from survana.artificial_data_generation.methods import ArtificialType
 from survana.config import CONFIG, PATHS
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
-from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
-from survana.result_processing.plotting import Plotter
 from survana.result_processing.result import Result
+from survana.result_processing.single_stability_result import (
+    SingleStabilityResult,
+)
 from survana.tuning.training_wrappers import robust_train
 
 warnings.simplefilter("ignore", category=ConvergenceWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-CENSOR_STATUS: str = CONFIG["columns"]["censor_status"]
-COXPH_EXPERIMENT_ID: str = CONFIG["experiments"]["coxph_experiment_id"]
-COXPH_NON_NESTED_EXPERIMENT_ID = CONFIG["experiments"][
-    "coxph_non_nested_experiment_id"
-]
-MONTHS_BEFORE_EVENT: str = CONFIG["columns"]["months_before_event"]
 N_TRIALS: int = CONFIG["tuning"]["n_trials"]
 RSKF_REPEATS: int = CONFIG["tuning"]["rskf_repeats"]
 RSKF_SPLITS: int = CONFIG["tuning"]["rskf_splits"]
@@ -43,13 +37,20 @@ RESULT_FIGURES_DATA_PATH: Path = PATHS["RESULT_FIGURES_DATA_PATH"]
 
 logger: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(
-    level=logging.CRITICAL,
+    level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     force=True,
 )
 
 
-def stability_selection():
+def stability_selection(
+    data_collection: tuple[
+        pd.DataFrame,
+        pd.DataFrame,
+        np.recarray[tuple[Any, ...], np.dtype[Any]],
+    ],
+    plot: bool = False,
+) -> SingleStabilityResult:
     """Stability selection function with subsampling B * N_LAMBDA times.
     Number of sumsamples per lambda is B = RSKF_SPLITS * RSKF_REPEATS,
     see config.py for constant definitions.
@@ -59,13 +60,6 @@ def stability_selection():
     with Elastic Net as well.
 
     """
-
-    data_collection: tuple[
-        pd.DataFrame, pd.DataFrame, np.recarray[tuple[Any, ...], np.dtype[Any]]
-    ] = load_data_for_sksurv_coxnet(
-        str(PREFILTERED_DATA_PATH_VARIANCE),
-        response_variables=(CENSOR_STATUS, MONTHS_BEFORE_EVENT),
-    )
 
     subsampler: Subsampler = Subsampler.repeated_kfold(
         n_splits=RSKF_SPLITS, n_repeats=RSKF_REPEATS
@@ -110,7 +104,6 @@ def stability_selection():
             desc=f"tuning on params 10^{LOG_LAMBDA_MIN} "
             + f"to 10^{LOG_LAMBDA_MAX} per fold",
         ):
-            logger.info(f"Fitting model for hyperparam {param}")
             model: (
                 lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float
             ) = robust_train(
@@ -124,11 +117,12 @@ def stability_selection():
                     art_X[test, :], y=sksurv_data.y[test]
                 )
                 results.save_results(score, param, model.coef_.flatten())
-                logger.info(f"param: {param} with score: " + f"{score}")
 
         results.save_results_to_file()
-    plotter: Plotter = Plotter(results.get_result_path())
-    plotter.plot_stability_path(save=True)
-    plotter.plot_stability_path_with_thresh(save=True)
-    selected_features: list[str] = plotter.get_selected_features()
-    print(selected_features)
+    result: SingleStabilityResult = SingleStabilityResult(
+        results.get_result_path()
+    )
+    if plot:
+        result.plot_stability_path(save=True)
+        result.plot_stability_path_with_thresh(save=True)
+    return result

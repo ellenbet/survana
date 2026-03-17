@@ -17,12 +17,13 @@ repos:
     rev: 5.13.2
     hooks:
     -   id: isort
-        args: ["--profile", "black"]
+        args: ["--profile", "black", "--line-length=79"]
 # Checks code compliance according to PEP8, might be replaced with ruff later
 -   repo: https://github.com/pycqa/flake8
     rev: 7.0.0
     hooks:
     -   id: flake8
+        args: ["--extend-ignore=E203"]
 # Checks types
 -   repo: https://github.com/pre-commit/mirrors-mypy
     rev: "v1.7.0"

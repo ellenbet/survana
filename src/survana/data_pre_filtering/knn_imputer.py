@@ -5,7 +5,7 @@ from survana.config import PATHS
 
 
 def knn_imputer(
-    prefiltered_datapth: str = str(PATHS["PREFILTERED_DATA_PATH_DOMAIN"]),
+    prefiltered_datapth: str = str(PATHS["PREFILTERED_DATA_PATH"]),
     sep=",",
     n_neighbors: int = 5,
     save: bool = False,

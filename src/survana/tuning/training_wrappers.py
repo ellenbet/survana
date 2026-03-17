@@ -53,8 +53,8 @@ def robust_train(
         model.fit(X_train, y_train)
     except np.linalg.LinAlgError:
         logger.error(
-            "Singular matrix multiplication attempted - "
-            + "skipping results.."
+            "\nSingular matrix multiplication attempted - "
+            + "skipping results..",
         )
         return 0.0
     except ArithmeticError:
