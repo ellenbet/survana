@@ -49,11 +49,21 @@ def load_data_for_sksurv_coxnet(
     logger.info(f"Using response variables from columns: {response_variables}")
     epigen_data = pd.read_csv(path_to_epigenetic_features, index_col=0)
 
+    assert not epigen_data.isna().any(axis=None), (
+        "Feature dataframe contains NaN values, impute missing values with"
+        + " survana.data_pre_filtering.knn_imputer to fix."
+    )
+
     clinical_data: pd.DataFrame = pd.read_csv(
         path_to_clinical_data,
         sep=separator,
         index_col="PATIENT_ID",
         usecols=["PATIENT_ID"] + list(response_variables),
+    )
+
+    assert not clinical_data.isna().any(axis=None), (
+        "Clinical dataframe contains NaN values, impute missing values with"
+        + " survana.data_pre_filtering.knn_imputer to fix."
     )
 
     data = pd.concat([epigen_data, clinical_data], axis=1, join="inner")

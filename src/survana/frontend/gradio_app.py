@@ -1,5 +1,7 @@
 # survana/src/modules/frontend.py
 
+import shutil
+import threading
 import tomllib
 from pathlib import Path
 from typing import Any
@@ -8,7 +10,15 @@ import gradio as gr
 import tomli_w
 from PIL import Image
 
-from survana.data_pre_filtering.domain_filter import domain_filter
+from survana.config import CONFIG, PATHS
+from survana.data_processing.dataloaders import load_data_for_sksurv_coxnet
+from survana.models.stability_selection import (
+    StabilitySelectionCancelled,
+    stability_selection,
+)
+from survana.result_processing.single_stability_result import (
+    SingleStabilityResult,
+)
 
 BASE_DIR = Path(__file__).parent
 IMG_PATH = BASE_DIR / "imgs" / "ChatGPT Image 13. feb. 2026, 17_38_44.png"
@@ -30,6 +40,19 @@ CSS = """
     margin: 0 6px !important;
 }
 """
+
+STOP_REQUESTED = threading.Event()
+STABILITY_SELECTION_RUNNING = threading.Event()
+
+
+def request_stability_selection_stop():
+    if STABILITY_SELECTION_RUNNING.is_set():
+        STOP_REQUESTED.set()
+        return (
+            "<span style='color:#666;font-size:0.95em;'>"
+            "Stopping stability selection...</span>"
+        )
+    return ""
 
 
 def load_toml_state(path_str: str):
@@ -117,8 +140,115 @@ def save_toml_to_disk(data: dict, path_str: str):
     return f"✅ Saved to {path}"
 
 
-def run_domain_filter():
-    return domain_filter().iloc[:100, :3]
+def run_stability_selection(
+    clinical_data_file: str | None,
+    epigenetic_data_file: str | None,
+    progress: gr.Progress = gr.Progress(track_tqdm=True),
+):
+    progress(0, desc="Preparing inputs")
+    STOP_REQUESTED.clear()
+    STABILITY_SELECTION_RUNNING.set()
+    loader_kwargs = {}
+    if epigenetic_data_file:
+        loader_kwargs["path_to_epigenetic_features"] = epigenetic_data_file
+    if clinical_data_file:
+        loader_kwargs["path_to_clinical_data"] = clinical_data_file
+
+    progress(0.1, desc="Loading clinical and epigenetic data")
+    data_collection = load_data_for_sksurv_coxnet(**loader_kwargs)
+    progress(0.2, desc="Running stability selection")
+    try:
+        result = stability_selection(
+            data_collection=data_collection,
+            stop_requested=STOP_REQUESTED.is_set,
+        )
+    except StabilitySelectionCancelled:
+        STABILITY_SELECTION_RUNNING.clear()
+        STOP_REQUESTED.clear()
+        return (
+            "",
+            "<span style='color:#666;font-size:0.95em;'>"
+            "Stability selection stopped.</span>",
+            gr.update(value=None, visible=False),
+        )
+
+    STABILITY_SELECTION_RUNNING.clear()
+    STOP_REQUESTED.clear()
+
+    selected_summary = (
+        ", ".join(result.get_selected_features()) or "No features selected."
+    )
+    progress(0.95, desc="Formatting results")
+    progress(1, desc="Done")
+    return (
+        selected_summary,
+        "",
+        gr.update(
+            value=result.get_stability_path_with_thresh_figure(),
+            visible=True,
+        ),
+    )
+
+
+def load_stability_selection_result(result_file: str | None):
+    if not result_file:
+        return (
+            "Please upload a result CSV file.",
+            "",
+            gr.update(value=None, visible=False),
+            gr.update(value=None, visible=False),
+        )
+
+    try:
+        normalized_result_path = _prepare_uploaded_result_file(
+            Path(result_file)
+        )
+        result = SingleStabilityResult(normalized_result_path)
+        selected_summary = (
+            ", ".join(result.get_selected_features())
+            or "No features selected."
+        )
+        return (
+            "",
+            selected_summary,
+            gr.update(
+                value=result._build_stability_path_figure(), visible=True
+            ),
+            gr.update(
+                value=result._build_stability_path_with_thresh_figure(),
+                visible=True,
+            ),
+        )
+    except Exception as exc:
+        return (
+            f"Could not load result file: {exc}",
+            "",
+            gr.update(value=None, visible=False),
+            gr.update(value=None, visible=False),
+        )
+
+
+def _prepare_uploaded_result_file(result_file: Path) -> Path:
+    expected_dir = PATHS["RESULT_CSV_DATA_PATH"]
+    expected_dir.mkdir(parents=True, exist_ok=True)
+
+    if (
+        result_file.parent == expected_dir
+        and "log(lambda)_" in result_file.name
+        and "_to_" in result_file.name
+        and "_results" in result_file.name
+    ):
+        return result_file
+
+    min_lambda = CONFIG["tuning"]["log_lambda_min"]
+    max_lambda = CONFIG["tuning"]["log_lambda_max"]
+    normalized_name = (
+        f"log(lambda)_{min_lambda}_to_{max_lambda}_results_"
+        f"{result_file.stem}.csv"
+    )
+    normalized_path = expected_dir / normalized_name
+    shutil.copy2(result_file, normalized_path)
+    return normalized_path
 
 
 def build_app():
@@ -133,21 +263,95 @@ def build_app():
         )
 
         with gr.Tabs():
-            with gr.Tab("Domain filter"):
-                gr.Markdown("## Demo for domain filter")
-
-                go = gr.Button("Run domain filter")
-                result = gr.Dataframe(
-                    label="Preview of domain-specific features:",
-                    interactive=False,
-                    wrap=True,
-                    row_count=3,
-                    col_count=(None, "fixed"),
+            with gr.Tab("Stability selection"):
+                gr.Markdown("## Run stability selection")
+                gr.Markdown(
+                    "Upload clinical and epigenetic data files, or leave them "
+                    "empty to use the paths from `config.toml`."
                 )
 
+                clinical_data_file = gr.File(
+                    label="Clinical data file",
+                    type="filepath",
+                    file_types=[".csv", ".txt", ".tsv"],
+                )
+                epigenetic_data_file = gr.File(
+                    label="Epigenetic data file",
+                    type="filepath",
+                    file_types=[".csv", ".txt", ".tsv"],
+                )
+                with gr.Row():
+                    go = gr.Button("Run stability selection")
+                    stop = gr.Button("Stop", variant="stop")
+                selected_features = gr.Textbox(
+                    label="Selected features",
+                    interactive=False,
+                    lines=6,
+                )
+                stability_path_thresh_plot = gr.Plot(
+                    label="Stability path with threshold",
+                    visible=False,
+                )
+                stop_warning = gr.Markdown("")
+
                 go.click(
-                    fn=run_domain_filter,
-                    outputs=result,
+                    fn=run_stability_selection,
+                    inputs=[
+                        clinical_data_file,
+                        epigenetic_data_file,
+                    ],
+                    outputs=[
+                        selected_features,
+                        stop_warning,
+                        stability_path_thresh_plot,
+                    ],
+                    show_progress="minimal",
+                    show_progress_on=selected_features,
+                )
+                stop.click(
+                    fn=request_stability_selection_stop,
+                    outputs=stop_warning,
+                    queue=False,
+                )
+
+            with gr.Tab("Display results from stability selection"):
+                gr.Markdown("## Display results from stability selection")
+                gr.Markdown(
+                    "Upload a result CSV with the same format as "
+                    "`gradio_result_csv_test/log(lambda)...` to visualize "
+                    "the stability paths."
+                )
+
+                result_csv_file = gr.File(
+                    label="Stability selection result file",
+                    type="filepath",
+                    file_types=[".csv"],
+                )
+                load_result_button = gr.Button("Load result")
+                load_result_status = gr.Markdown("")
+                loaded_selected_features = gr.Textbox(
+                    label="Selected features",
+                    interactive=False,
+                    lines=6,
+                )
+                stability_path_plot = gr.Plot(
+                    label="Stability path",
+                    visible=False,
+                )
+                stability_path_thresh_result_plot = gr.Plot(
+                    label="Stability path with threshold",
+                    visible=False,
+                )
+
+                load_result_button.click(
+                    fn=load_stability_selection_result,
+                    inputs=result_csv_file,
+                    outputs=[
+                        load_result_status,
+                        loaded_selected_features,
+                        stability_path_plot,
+                        stability_path_thresh_result_plot,
+                    ],
                 )
 
             with gr.Tab("Update and inspect model settings") as config_tab:
@@ -243,7 +447,7 @@ def build_app():
                     outputs=status,
                 )
 
-    return demo
+    return demo.queue()
 
 
 if __name__ == "__main__":

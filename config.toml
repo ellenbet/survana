@@ -8,11 +8,9 @@ clinical_data_path = "data/data_clinical_patient.txt"
 raw_features_path = "data/all_norm_meth.tsv"
 result_json_dir = "result_json_domain"
 result_json_file = "running_results.json"
-
-# results
 prefiltered_data_path = "data/domain_filtered_features_knn-imputed.csv"
-result_csv_data_path = "result_csv_domain"
-result_figures_data_path = "result_figs_domain"
+result_csv_data_path = "gradio_result_csv_test"
+result_figures_data_path = "gradio_result_figs_test"
 
 [filter_filenames]
 chrom_hmm = "Metabric_RRBS_ChromHMM_intersect.bed"

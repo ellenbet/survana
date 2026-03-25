@@ -1,5 +1,6 @@
 import logging
 import warnings
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,10 @@ logging.basicConfig(
 )
 
 
+class StabilitySelectionCancelled(Exception):
+    pass
+
+
 def stability_selection(
     data_collection: tuple[
         pd.DataFrame,
@@ -50,6 +55,7 @@ def stability_selection(
         np.recarray[tuple[Any, ...], np.dtype[Any]],
     ],
     plot: bool = False,
+    stop_requested: Callable[[], bool] | None = None,
 ) -> SingleStabilityResult:
     """Stability selection function with subsampling B * N_LAMBDA times.
     Number of sumsamples per lambda is B = RSKF_SPLITS * RSKF_REPEATS,
@@ -98,6 +104,8 @@ def stability_selection(
         leave=False,
         total=RSKF_SPLITS * RSKF_REPEATS,
     ):
+        if stop_requested and stop_requested():
+            raise StabilitySelectionCancelled("Stopped by user.")
         for param in tqdm.tqdm(
             params,
             leave=False,
