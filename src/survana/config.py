@@ -63,12 +63,7 @@ def paths() -> dict[str, Path]:
         / cfg["paths"]["prefiltered_data_path"],
         "CLINICAL_DATA_PATH": base_dir / cfg["paths"]["clinical_data_path"],
         "RAW_FEATURES_PATH": base_dir / cfg["paths"]["raw_features_path"],
-        "PREFILTERED_DATA_PATH_VARIANCE": base_dir
-        / cfg["paths"]["prefiltered_data_path_variance"],
-        "PREFILTERED_DATA_PATH_DOMAIN": base_dir
-        / cfg["paths"]["prefiltered_data_path_domain"],
         "RESULT_JSON_DIR": base_dir / cfg["paths"]["result_json_dir"],
-        "RESULT_JSON_FILE": base_dir / cfg["paths"]["result_json_file"],
     }
 
 

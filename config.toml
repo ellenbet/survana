@@ -2,15 +2,12 @@
 base_dir = "."
 src_path = "src"
 data_path = "data"
-prefiltered_data_path_variance = "data/variance_filtered_features_1000_knn-imputed.csv"
-prefiltered_data_path_domain = "data/domain_filtered_features_knn-imputed.csv"
 clinical_data_path = "data/data_clinical_patient.txt"
 raw_features_path = "data/all_norm_meth.tsv"
-result_json_dir = "result_json_domain"
-result_json_file = "running_results.json"
-prefiltered_data_path = "data/domain_filtered_features_knn-imputed.csv"
-result_csv_data_path = "gradio_result_csv_test"
-result_figures_data_path = "gradio_result_figs_test"
+result_json_dir = "result_json_2500_variance"
+prefiltered_data_path = "data/variance_filtered_features_2500_knn-imputed.csv"
+result_csv_data_path = "result_csv_2500_variance"
+result_figures_data_path = "result_figs_2500_variance"
 
 [filter_filenames]
 chrom_hmm = "Metabric_RRBS_ChromHMM_intersect.bed"
@@ -30,13 +27,13 @@ coxph_non_nested_experiment_id = "non-nested coxph"
 skf_splits = 5
 rskf_splits = 5
 rskf_repeats = 10
-mccv_splits = 10
+mccv_splits = 100
 coef_zero_cutoff = 4
-n_trials = 200
+n_trials = 100
 log_lambda_min = -8
 log_lambda_max = 1
 n_lambda = 100
 
 [model]
-model_iterations = 100
+model_iterations = 400
 model_type = "lasso"

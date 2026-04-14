@@ -8,6 +8,7 @@ import pandas as pd
 import seaborn as sns
 
 from survana.config import PATHS
+from survana.result_processing.plot_config import _set_plt_params
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -212,6 +213,45 @@ class SingleStabilityResult:
             )
         plt.show()
 
+    def return_stability_path_with_thresh(self, save: bool):
+        """Plots the stability paths with the frequency cutoff. Colors every
+        10th non-chosen features grey.
+
+        Args:
+            save (bool, optional): set to True to save result in result_figs/.
+            Defaults to False.
+
+        Returns:
+            Figure: The generated matplotlib figure.
+        """
+
+        arbitrary_number = 200
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.axhline(
+            self.reliability_thresh,
+            label=f"reliability thresh: {round(self.reliability_thresh, 4)}\n"
+            + f"no. of features: {len(self.selected_features)}",
+            c="r",
+            ls=":",
+        )
+        ax.legend()
+        non_informative_df: pd.DataFrame = self.wide_df.drop(
+            self.selected_features, axis=1
+        )
+        non_informative_df.iloc[:, :arbitrary_number].plot(
+            ax=ax, legend=False, style=":", color="grey"
+        )
+        self.wide_df[self.selected_features].plot(ax=ax, legend=False)
+        ax.set_xlabel(r"1 / λ")
+        ax.set_ylabel(r"frequency (θ)")
+        if save:
+            fig_name: str = self.path + "_stability_path_w_thresh.pdf"
+            fig.savefig(
+                self.fig_path / fig_name,
+                bbox_inches="tight",
+            )
+        return fig
+
     def get_selected_features(self) -> list[str]:
         return self.selected_features
 
@@ -293,13 +333,16 @@ class SingleStabilityResult:
     def _generate_fdr_results(self) -> None:
         rows: list[dict[str, float]] = []
         for cut in np.linspace(0, 1, 100):
-            df_q = self.top_frequency_df.query(f"freq > {cut}")
-            fdr = (
-                1
-                + df_q["feature"]
-                .str.contains("artificial", case=False, na=False)
-                .sum()
-            ) / len(df_q["feature"])
+            df_q: pd.DataFrame = self.top_frequency_df.query(f"freq > {cut}")
+            if len(df_q["feature"]) != 0:
+                fdr: float = (
+                    1
+                    + df_q["feature"]
+                    .str.contains("artificial", case=False, na=False)
+                    .sum()
+                ) / len(df_q["feature"])
+            else:
+                fdr = 1
             rows.append({"cut": cut, "fdr": fdr})
 
         row_df = pd.DataFrame(rows)
@@ -319,28 +362,3 @@ class SingleStabilityResult:
             :, list(above_thresh_map)
         ].columns
         self.selected_features: list[str] = list(selected_cols)
-
-
-def _set_plt_params(remove_grid=False):
-    """Set parameters and use seaborn theme to plot."""
-    sns.set_theme()
-    if remove_grid:
-        sns.set_style("whitegrid", {"axes.grid": False})
-    params = {
-        "font.family": "DejaVu Serif",
-        "font.serif": ["STIXGeneral"],
-        "mathtext.fontset": "stix",
-        "axes.spines.top": False,
-        "axes.spines.right": False,
-        "axes.grid": True,
-        "grid.alpha": 0.25,
-        "axes.axisbelow": True,
-        "axes.titlesize": "large",
-        "axes.labelsize": "large",
-        "xtick.labelsize": "large",
-        "ytick.labelsize": "large",
-        "legend.fontsize": "medium",
-        "savefig.dpi": 300,
-    }
-    plt.rcParams.update(params)
-    plt.style.use("tableau-colorblind10")

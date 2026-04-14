@@ -10,9 +10,12 @@ from matplotlib import pyplot as plt
 from pydantic import BaseModel, Field
 
 from survana.config import PATHS
+from survana.result_processing.plot_config import _set_plt_params
 from survana.result_processing.single_stability_result import (
     SingleStabilityResult,
 )
+
+_set_plt_params()
 
 
 class MultipleStabilityResult(BaseModel):
@@ -55,7 +58,14 @@ class MultipleStabilityResult(BaseModel):
             "accumulated_results_since_" + str(self.created_at)
         )
 
-    def plot_top_score(self, save: bool = False) -> None:
+    def get_top_run(self) -> dict[str, float | list[str]]:
+        scores: list[float] = list(self.run_results.keys())
+        return self.run_results[max(scores)]
+
+    def plot_top_score(self, save: bool = False, cutoff=0.5) -> None:
+        self.top_features: list[str] = list(
+            self.get_top_features_with_frequencies(cut=cutoff).keys()
+        )
         scores: list[float] = list(self.run_results.keys())
         hyp: list[float] = [
             best_param
@@ -81,6 +91,79 @@ class MultipleStabilityResult(BaseModel):
                 bbox_inches="tight",
             )
         plt.legend()
+        plt.show()
+
+    def plot_top_score_with_labs(
+        self, save: bool = False, cutoff: float = 0.5
+    ) -> None:
+        top_features = set(
+            self.get_top_features_with_frequencies(cut=cutoff).keys()
+        )
+
+        scores_present = []
+        hyp_present = []
+        scores_missing = []
+        hyp_missing = []
+
+        for score, result in self.run_results.items():
+            best_param = result.get("best_param")
+            run_features: list[str] = result.get("features", [])  # type: ignore[assignment] # noqa: E501
+
+            if not isinstance(best_param, float):
+                continue
+
+            if isinstance(run_features, dict):
+                run_feature_names = set(run_features.keys())
+            else:
+                run_feature_names = set(run_features)
+
+            has_all_top_features = top_features.issubset(run_feature_names)
+
+            if has_all_top_features:
+                hyp_present.append(best_param)
+                scores_present.append(score)
+            else:
+                hyp_missing.append(best_param)
+                scores_missing.append(score)
+
+        plt.figure()
+        plt.scatter(
+            hyp_present,
+            scores_present,
+            c="tab:green",
+            label="all top features present",
+        )
+        plt.axhline(
+            np.mean(scores_present),
+            label=f"mean present: {round(np.mean(scores_present), 3)}",
+            ls=":",
+            c="tab:green",
+        )
+        plt.scatter(
+            hyp_missing,
+            scores_missing,
+            c="tab:orange",
+            label="missing top features",
+        )
+        plt.axhline(
+            np.mean(scores_missing),
+            label=f"mean missing: {round(np.mean(scores_missing), 3)}",
+            ls=":",
+            c="tab:orange",
+        )
+
+        plt.xscale("log")
+        plt.ylabel("C-index")
+        plt.xlabel(r"$\lambda$")
+        plt.legend()
+
+        if save:
+            plt.savefig(
+                PATHS["RESULT_FIGURES_DATA_PATH"]
+                / f"multiple_stability_top_scores_{self.created_at}.pdf",
+                bbox_inches="tight",
+            )
+
         plt.show()
 
     def plot_feature_freq(

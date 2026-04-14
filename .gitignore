@@ -440,4 +440,4 @@ site/
 
 # Result files
 *results_df.csv
-result_csv/
+result_*/

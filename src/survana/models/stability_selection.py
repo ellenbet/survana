@@ -1,18 +1,18 @@
 import logging
 import warnings
 from collections.abc import Callable
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
 import tqdm
+from scipy.sparse.linalg import ArpackNoConvergence
 from sklearn.exceptions import ConvergenceWarning
 
 from survana.artificial_data_generation.generation import ArtificialGenerator
 from survana.artificial_data_generation.methods import ArtificialType
-from survana.config import CONFIG, PATHS
+from survana.config import CONFIG
 from survana.data_processing.data_models import SksurvData
 from survana.data_processing.data_subsampler import Subsampler
 from survana.result_processing.result import Result
@@ -24,17 +24,6 @@ from survana.tuning.training_wrappers import robust_train
 warnings.simplefilter("ignore", category=ConvergenceWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-N_TRIALS: int = CONFIG["tuning"]["n_trials"]
-RSKF_REPEATS: int = CONFIG["tuning"]["rskf_repeats"]
-RSKF_SPLITS: int = CONFIG["tuning"]["rskf_splits"]
-SKF_SPLITS: int = CONFIG["tuning"]["skf_splits"]
-COEF_ZERO_CUTOFF: int = CONFIG["tuning"]["coef_zero_cutoff"]
-LOG_LAMBDA_MAX: int = CONFIG["tuning"]["log_lambda_max"]
-LOG_LAMBDA_MIN: int = CONFIG["tuning"]["log_lambda_min"]
-MODEL_TYPE: str = CONFIG["model"]["model_type"]
-N_LAMBDA: int = CONFIG["tuning"]["n_lambda"]
-PREFILTERED_DATA_PATH_VARIANCE: Path = PATHS["PREFILTERED_DATA_PATH_VARIANCE"]
-RESULT_FIGURES_DATA_PATH: Path = PATHS["RESULT_FIGURES_DATA_PATH"]
 
 logger: logging.Logger = logging.getLogger(__name__)
 logging.basicConfig(
@@ -68,54 +57,70 @@ def stability_selection(
     """
 
     subsampler: Subsampler = Subsampler.repeated_kfold(
-        n_splits=RSKF_SPLITS, n_repeats=RSKF_REPEATS
+        n_splits=CONFIG["tuning"]["rskf_splits"],
+        n_repeats=CONFIG["tuning"]["rskf_repeats"],
     )
-
     sksurv_data: SksurvData = SksurvData(data_collection=data_collection)
     feature_no: int = sksurv_data.X.shape[1]
-    art_X: np.ndarray[tuple[Any, ...], np.dtype[Any]] = ArtificialGenerator(
-        feature_no, ArtificialType.KNOCKOFF
-    ).fit_transform(sksurv_data.X)
+    try:
+        art_X: np.ndarray[
+            tuple[Any, ...], np.dtype[Any]
+        ] = ArtificialGenerator(
+            feature_no, ArtificialType.KNOCKOFF
+        ).fit_transform(
+            sksurv_data.X
+        )
+    except ArpackNoConvergence:
+        return stability_selection(data_collection, plot, stop_requested)
 
     feature_names: list[str] = list(sksurv_data.X.columns)
     artificial_names: list[str] = [
         f"artificial_{i}" for i in range(feature_no)
     ]
-
     logger.info(
         "starting stability selectiont trial with"
-        + f"\nLOG_LAMBDA_MIN: {LOG_LAMBDA_MIN}"
-        + f"\nLOG_LAMBDA_MAX: {LOG_LAMBDA_MAX}"
-        + f"\nN_LAMBDA: {N_LAMBDA}"
-        + f"\nN_CV_FOLDS: {RSKF_SPLITS}"
-        + f"\nN_REPEATS_IN_CV: {RSKF_REPEATS}"
+        f"\nLOG_LAMBDA_MIN: {CONFIG['tuning']['log_lambda_min']}"
+        f"\nLOG_LAMBDA_MAX: {CONFIG['tuning']['log_lambda_max']}"
+        f"\nN_LAMBDA: {CONFIG['tuning']['n_lambda']}"
+        f"\nN_CV_FOLDS: {CONFIG['tuning']['rskf_splits']}"
+        f"\nN_REPEATS_IN_CV: {CONFIG['tuning']['rskf_repeats']}"
     )
-    params: np.ndarray = np.logspace(LOG_LAMBDA_MIN, LOG_LAMBDA_MAX, N_LAMBDA)
+    params: np.ndarray = np.logspace(
+        CONFIG["tuning"]["log_lambda_min"],
+        CONFIG["tuning"]["log_lambda_max"],
+        CONFIG["tuning"]["n_lambda"],
+    )
     results: Result = Result(
         feature_names + artificial_names,
-        rounding_cutoff=COEF_ZERO_CUTOFF,
-        bin_min=LOG_LAMBDA_MIN,
-        bin_max=LOG_LAMBDA_MAX,
+        rounding_cutoff=int(CONFIG["tuning"]["coef_zero_cutoff"]),
+        bin_min=int(CONFIG["tuning"]["log_lambda_min"]),
+        bin_max=int(CONFIG["tuning"]["log_lambda_max"]),
     )
     for test, train in tqdm.tqdm(
         subsampler.split(art_X, sksurv_data.y),
-        desc=f"{RSKF_SPLITS}-fold cross validation splits with {RSKF_REPEATS}"
-        + " repeats",
+        desc=f"{CONFIG['tuning']['rskf_splits']}-fold cross validation"
+        + f"splits with {CONFIG['tuning']['rskf_repeats']} repeats",
         leave=False,
-        total=RSKF_SPLITS * RSKF_REPEATS,
+        total=CONFIG["tuning"]["rskf_splits"]
+        * CONFIG["tuning"]["rskf_repeats"],
     ):
         if stop_requested and stop_requested():
             raise StabilitySelectionCancelled("Stopped by user.")
         for param in tqdm.tqdm(
             params,
             leave=False,
-            desc=f"tuning on params 10^{LOG_LAMBDA_MIN} "
-            + f"to 10^{LOG_LAMBDA_MAX} per fold",
+            desc=f"tuning on params 10^{CONFIG['tuning']['log_lambda_min']} "
+            + f"to 10^{CONFIG['tuning']['log_lambda_max']} per fold",
         ):
             model: (
                 lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float
             ) = robust_train(
-                MODEL_TYPE, art_X, sksurv_data.y, param, train, n_iter=200
+                CONFIG["model"]["model_type"],
+                art_X,
+                sksurv_data.y,
+                param,
+                train,
+                n_iter=CONFIG["tuning"]["n_trials"],
             )
 
             if isinstance(model, float):

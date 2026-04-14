@@ -1,3 +1,4 @@
+import gc
 import logging
 from typing import Any
 
@@ -40,7 +41,7 @@ def main() -> None:
 
         assert (
             len(single_result.get_selected_features()) > 0
-        ), "no features found"
+        ), "no features found, unacceptable error"
         new_data_collection: tuple[
             pd.DataFrame,
             pd.DataFrame,
@@ -59,6 +60,10 @@ def main() -> None:
         accumulated_results.add_model_score(
             final_run_tuning, features=single_result.get_selected_features()
         )
+        del single_result
+        del final_run_tuning
+        del new_data_collection
+        gc.collect()
 
 
 if __name__ == "__main__":
