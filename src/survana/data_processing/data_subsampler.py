@@ -113,6 +113,20 @@ class Subsampler:
         )
 
     def split(self, X, y) -> Iterator[Any]:
+        """_summary_
+
+        Args:
+            X (pd.DataFrame): design matrix
+            y (np.recarray): response variable
+
+        Returns:
+            Iterator[Any]: train and test
+            indices for the chosen subsampling strategy
+
+        Yields:
+            Iterator[Any]: train and test
+            indices for the chosen subsampling strategy
+        """
         if self.subsampling == SubsamplingStrategy.REPEATED_KFOLD:
             return stratified_repeated_kfold_splits(
                 X, y, self.n_repeats, self.n_splits, self.random_state

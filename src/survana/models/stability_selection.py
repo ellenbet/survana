@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import sksurv.linear_model as lm
 import tqdm
-from scipy.sparse.linalg import ArpackNoConvergence
 from sklearn.exceptions import ConvergenceWarning
 
 from survana.artificial_data_generation.generation import ArtificialGenerator
@@ -45,16 +44,32 @@ def stability_selection(
     ],
     plot: bool = False,
     stop_requested: Callable[[], bool] | None = None,
+    override_min_lamda: float = 0.0,
+    version: str = "survana",
 ) -> SingleStabilityResult:
     """Stability selection function with subsampling B * N_LAMBDA times.
     Number of sumsamples per lambda is B = RSKF_SPLITS * RSKF_REPEATS,
     see config.py for constant definitions.
 
-    Function relies on robust_train() function which can be used
-    with Ridge and Lasso Cox-regression, can be written to function
-    with Elastic Net as well.
 
+    Args:
+        data_collection (SksurvData): data collection from SksurvData or
+        tuple with same format
+        plot (bool, optional): plot all results from selection.
+        Defaults to False.
+        stop_requested (Callable[[], bool] | None, optional): For UI.
+        Defaults to None.
+
+    Raises:
+        StabilitySelectionCancelled: If UI-user interrupts
+
+    Returns:
+        SingleStabilityResult: to be plotted
     """
+    if version == "survana":
+        denominator = "all"
+    else:
+        denominator = "stabl"
 
     subsampler: Subsampler = Subsampler.repeated_kfold(
         n_splits=CONFIG["tuning"]["rskf_splits"],
@@ -62,17 +77,9 @@ def stability_selection(
     )
     sksurv_data: SksurvData = SksurvData(data_collection=data_collection)
     feature_no: int = sksurv_data.X.shape[1]
-    try:
-        art_X: np.ndarray[
-            tuple[Any, ...], np.dtype[Any]
-        ] = ArtificialGenerator(
-            feature_no, ArtificialType.KNOCKOFF
-        ).fit_transform(
-            sksurv_data.X
-        )
-    except ArpackNoConvergence:
-        return stability_selection(data_collection, plot, stop_requested)
-
+    art_X: np.ndarray[tuple[Any, ...], np.dtype[Any]] = ArtificialGenerator(
+        feature_no, ArtificialType.KNOCKOFF
+    ).fit_transform(sksurv_data.X)
     feature_names: list[str] = list(sksurv_data.X.columns)
     artificial_names: list[str] = [
         f"artificial_{i}" for i in range(feature_no)
@@ -93,13 +100,11 @@ def stability_selection(
     results: Result = Result(
         feature_names + artificial_names,
         rounding_cutoff=int(CONFIG["tuning"]["coef_zero_cutoff"]),
-        bin_min=int(CONFIG["tuning"]["log_lambda_min"]),
-        bin_max=int(CONFIG["tuning"]["log_lambda_max"]),
     )
-    for test, train in tqdm.tqdm(
+    for train, _ in tqdm.tqdm(
         subsampler.split(art_X, sksurv_data.y),
-        desc=f"{CONFIG['tuning']['rskf_splits']}-fold cross validation"
-        + f"splits with {CONFIG['tuning']['rskf_repeats']} repeats",
+        desc=f"{CONFIG['tuning']['rskf_splits']}-fold subsamples "
+        + f"with {CONFIG['tuning']['rskf_repeats']} repeats",
         leave=False,
         total=CONFIG["tuning"]["rskf_splits"]
         * CONFIG["tuning"]["rskf_repeats"],
@@ -126,14 +131,14 @@ def stability_selection(
             if isinstance(model, float):
                 pass
             else:
-                score: float | Any = model.score(
-                    art_X[test, :], y=sksurv_data.y[test]
-                )
-                results.save_results(score, param, model.coef_.flatten())
+                results.save_results(param, model.coef_.flatten())
 
         results.save_results_to_file()
     result: SingleStabilityResult = SingleStabilityResult(
-        results.get_result_path()
+        results.get_result_path(),
+        denominator=denominator,
+        n_lambdas=CONFIG["tuning"]["n_lambda"],
+        overwrite_lambda_min=override_min_lamda,
     )
     if plot:
         result.plot_stability_path(save=True)

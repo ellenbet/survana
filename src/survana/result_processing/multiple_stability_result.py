@@ -49,10 +49,15 @@ class MultipleStabilityResult(BaseModel):
         features: list[str],
     ) -> None:
         best_score_index: int = np.argmax(tuning_dict["scores"])
-        best_param: float = tuning_dict["params"]["alpha"][best_score_index]
+        res: dict[str, Any] = {}
+        if "params" in tuning_dict:
+            best_param: float = tuning_dict["params"]["alpha"][
+                best_score_index
+            ]
+            res["best_param"] = best_param
         best_score: float = tuning_dict["scores"][best_score_index]  # ignore
 
-        res: dict[str, Any] = {"best_param": best_param, "features": features}
+        res["features"] = features
         self.run_results.update({best_score: res})
         self._write_to_json_file(
             "accumulated_results_since_" + str(self.created_at)

@@ -1,0 +1,39 @@
+[paths]
+base_dir = ".."
+src_path = "src"
+data_path = "data"
+clinical_data_path = "data/data_clinical_patient.txt"
+raw_features_path = "data/all_norm_meth.tsv"
+result_json_dir = "result_ER_FOXA1_json"
+prefiltered_data_path = "data/variance_filtered_features_2500_knn-imputed.csv"
+result_csv_data_path = "final_2.5_result_csv_2500_variance_5-fold_subsample_x20_run_03"
+result_figures_data_path = "final_2.5_result_csv_2500_variance_5-fold_subsample_x20_run_03"
+
+[filter_filenames]
+chrom_hmm = "Metabric_RRBS_ChromHMM_intersect.bed"
+unibind = "Metabric_RRBS_UniBind_intersect.bed"
+
+[columns]
+censor_status = "RFS_STATUS"
+months_before_event = "RFS_MONTHS"
+patient_id = "PATIENT_ID"
+sep = ","
+
+[experiments]
+coxph_experiment_id = "coxph"
+coxph_non_nested_experiment_id = "non-nested coxph"
+
+[tuning]
+skf_splits = 5
+rskf_splits = 5
+rskf_repeats = 20
+mccv_splits = 100
+coef_zero_cutoff = 4
+n_trials = 100
+log_lambda_min = -3
+log_lambda_max = 1
+n_lambda = 40
+
+[model]
+model_iterations = 400
+model_type = "lasso"

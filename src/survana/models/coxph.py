@@ -189,7 +189,7 @@ def non_nested_coxph() -> None:
     ident = experiment.experiment_id
     logger.info(f"\nStarting MLflow with experiment id {ident}")
 
-    for test, train in subsampler.split(sksurv_data.X, sksurv_data.y):
+    for train, test in subsampler.split(sksurv_data.X, sksurv_data.y):
         wrapped_objective: partial[float | Any] = partial(
             mlflow_non_nested_objective_with_args,
             sksurv_data=sksurv_data,

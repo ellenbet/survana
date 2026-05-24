@@ -439,5 +439,9 @@ site/
 .eggs/
 
 # Result files
-*results_df.csv
-result_*/
+*.csv
+*results
+# Root-level result directories, e.g. final_2.5_result_csv_.../
+/*result*/
+**/result*/
+!/src

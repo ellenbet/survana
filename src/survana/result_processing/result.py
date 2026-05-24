@@ -1,7 +1,6 @@
 import logging
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import pandas as pd
@@ -13,6 +12,11 @@ COEF_ZERO_CUTOFF, LOG_LAMBDA_MAX, LOG_LAMBDA_MIN = (
     CONFIG["tuning"]["log_lambda_max"],
     CONFIG["tuning"]["log_lambda_min"],
 )
+
+LOG_LAMBDA_MIN = CONFIG["tuning"]["log_lambda_min"]
+LOG_LAMBDA_MAX = CONFIG["tuning"]["log_lambda_max"]
+N_LAMBDA = CONFIG["tuning"]["n_lambda"]
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -40,9 +44,6 @@ class Result:
         self,
         feature_names: list[str],
         rounding_cutoff: int = COEF_ZERO_CUTOFF,
-        bin_min: int = LOG_LAMBDA_MIN,
-        bin_max: int = LOG_LAMBDA_MAX,
-        bin_res: int = 10,
     ) -> None:
         assert all(
             isinstance(name, str) for name in feature_names
@@ -50,19 +51,14 @@ class Result:
 
         self.results: dict[
             tuple[str, float], dict[str, int | float]
-        ] = defaultdict(
-            lambda: {"occurence": 0, "count": 0, "accumulated_score": 0.0}
-        )
+        ] = defaultdict(lambda: {"occurence": 0, "count": 0})
         self.feature_names: list[str] = feature_names
-        self.trial_name: str = f"log(lambda)_{bin_min}_to_{bin_max}_results_"
+        self.trial_name: str = (
+            f"log(lambda)_{LOG_LAMBDA_MIN}" + f"_to_{LOG_LAMBDA_MAX}_results_"
+        )
         self.rounding_cutoff: int = rounding_cutoff
-        self.bin_max: int = bin_max
-        self.bin_min: int = bin_min
-        self._hyperparam_bin_configuration(bin_min, bin_max, bin_res)
 
-    def save_results(
-        self, score: float, hyperparam: float, all_coefs: np.ndarray
-    ) -> None:
+    def save_results(self, hyperparam: float, all_coefs: np.ndarray) -> None:
         """Method that saves feature selection frequency by defining all
         non-zero features as selected. Non-zero cutoff is defined by
         rounding_cutoff attribute.
@@ -71,15 +67,12 @@ class Result:
             hyperparam (float): in this case lambda
             all_coefs (np.ndarray): coefs from regression
         """
-        hyperparam_bin: float = self.get_bin(hyperparam)
+
         for coef, feature_name in zip(all_coefs, self.feature_names):
-            self.results[(feature_name, hyperparam_bin)][
+            self.results[(feature_name, hyperparam)][
                 "occurence"
             ] += self._above_cutoff(coef)
-            self.results[(feature_name, hyperparam_bin)][
-                "accumulated_score"
-            ] += score
-            self.results[(feature_name, hyperparam_bin)]["count"] += 1
+            self.results[(feature_name, hyperparam)]["count"] += 1
 
     def get_results(self) -> dict[tuple[str, float], dict[str, int | float]]:
         """Result method asserts length of both result objects are
@@ -99,7 +92,6 @@ class Result:
                     "feature": feature,
                     "hyperparam": hyperparam_bin,
                     "occurence": stats["occurence"],
-                    "accumulated_score": stats["accumulated_score"],
                     "count": stats["count"],
                 }
                 for (feature, hyperparam_bin), stats in self.results.items()
@@ -107,10 +99,6 @@ class Result:
         )
 
         long_df["freq"] = long_df["occurence"] / long_df["count"]
-        long_df["average_score"] = (
-            long_df["accumulated_score"] / long_df["count"]
-        )
-
         return long_df
 
     def save_results_to_file(self) -> None:
@@ -141,52 +129,3 @@ class Result:
             return 1
         else:
             return 0
-
-    def get_bin(
-        self,
-        hyperparam: float,
-    ) -> float:
-        """Methods that returns the bin belonging
-        to the hyperparameter, depends on bin_min
-        and bin_max which is set by default in config
-
-        Args:
-            hyperparam (float): hyperparameter
-
-        Returns:
-            float: name of bin
-        """
-        log_hyp: float = np.log10(hyperparam)
-        assert log_hyp >= self.bin_min and log_hyp <= self.bin_max, [
-            f"non-valid log(hyperparameter) {log_hyp}, must be between "
-            + f"{self.bin_min} and {self.bin_max}"
-        ]
-        return self._names[
-            np.searchsorted(self._bins[:], [hyperparam], side="left") - 1
-        ][0]
-
-    def _hyperparam_bin_configuration(
-        self,
-        min: int,
-        max: int,
-        res: int,
-    ) -> None:
-        """Private method that configures the bin logic for later
-        stability path plotting of continious hyperparameters
-
-        Args:
-            min (int): minimum 10-log of hyperparam option
-            max (int): maximum 10-log of hyperparam option
-            res (int): resolution between each 10-log difference
-        """
-
-        self._resolution: int = (max - min) * res
-        self._bins: np.ndarray[
-            tuple[Any, ...], np.dtype[np.float64]
-        ] = np.logspace(min, max, self._resolution)
-        self._names = np.array(
-            [
-                (self._bins[i - 1] + self._bins[i]) * 0.5
-                for i in range(1, len(self._bins))
-            ]
-        )

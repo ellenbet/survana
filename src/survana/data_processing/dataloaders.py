@@ -112,13 +112,14 @@ def load_partial_data_for_sksurv_coxnet(
         feature for feature in selected_features if "artificial" not in feature
     ]
 
+    if len(selected_true) == 0:
+        logger.error("Not able to load empty list of selected features")
+
     epigen_data: pd.DataFrame = pd.read_csv(
         path_to_epigenetic_features,
         index_col="PATIENT_ID",
         usecols=["PATIENT_ID"] + selected_true,
     )
-
-    epigen_data.set_index(epigen_data.columns[0])
 
     clinical_data: pd.DataFrame = pd.read_csv(
         path_to_clinical_data,

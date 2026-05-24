@@ -15,18 +15,19 @@ from survana.tuning.optuna_objectives import (
     cox_cv_objective,
     random_survival_forest_objective,
 )
+from survana.tuning.training_wrappers import robust_train
 
-optuna.logging.set_verbosity(optuna.logging.WARNING)
+# optuna.logging.set_verbosity(optuna.logging.WARNING)
 
 
 def cox_final_tuning(
     data: SksurvData,
+    model_type="ridge",
     n_alphas: int = 100,
-    min_alpha_log=-10,
-    max_alpha_log=2,
-    n_iter: int = 100,
+    min_alpha_log=-8,
+    max_alpha_log=1,
     splits: int = 5,
-    repeats: int = 5,
+    repeats: int = 1,
 ) -> dict[str, dict[str, Any] | np.ndarray]:
     """Final tuner which uses gridsearch to find best alpha, search is
     spread across logspace.
@@ -50,10 +51,6 @@ def cox_final_tuning(
         "alpha": np.logspace(min_alpha_log, max_alpha_log, n_alphas)
     }
     for param in tqdm(params["alpha"]):
-        model = lm.CoxPHSurvivalAnalysis(
-            alpha=param,
-            n_iter=n_iter,
-        )
         scores: list[float] = []
 
         subsampler: Subsampler = Subsampler.repeated_kfold(
@@ -61,23 +58,28 @@ def cox_final_tuning(
         )
 
         for train_ind, test_ind in subsampler.split(X=data.X, y=data.y):
-            try:
-                model.fit(data.X.iloc[train_ind], y=data.y[train_ind])
-                inner_score: float | Any = model.score(
-                    data.X.iloc[test_ind], y=data.y[test_ind]
+            trained_model: (
+                lm.CoxPHSurvivalAnalysis | lm.CoxnetSurvivalAnalysis | float
+            ) = robust_train(
+                model_type=model_type,
+                X=data.X.to_numpy(),
+                y=data.y,
+                train_ind=train_ind,
+                param=param,
+            )
+            if hasattr(trained_model, "score"):
+                score = trained_model.score(
+                    data.X.iloc[test_ind, :], data.y[test_ind]
                 )
-                scores.append(inner_score)
-            except np.linalg.LinAlgError:
-                scores.append(0.0)
-
-        score: float = float(np.mean((scores)))
-        variation: float = float(np.std(scores))
-        top_score.append(score)
-        stds.append(variation)
+                scores.append(score)
+            else:
+                score = float(trained_model)
+        top_score.append(np.mean(scores))
+        stds.append(np.std(scores))
     return {
         "params": params,
         "scores": np.array(top_score),
-        "std_dev": np.array(stds),
+        "stds": np.array(stds),
     }
 
 
@@ -101,7 +103,7 @@ def coxph_final_tuning_optuna(
         n_trials (int, optional): number of optuna trials. Defaults to 50.
 
     Returns:
-        dict[str, Any]: dict with params, scores and std_dev keys.
+        dict[str, Any]: dict with params, scores and stds keys.
     """
     study = optuna.create_study(direction="maximize")
     wrapped: partial[floating] = partial(
@@ -145,4 +147,54 @@ def rsf_final_tuning(data: SksurvData, n_trials: int = 20) -> dict[str, Any]:
     values = np.array([trial.value for trial in study.trials])
     stds = np.array([trial.user_attrs["std_dev"] for trial in study.trials])
     params = [trial.params for trial in study.trials]
-    return {"params": params, "scores": values, "std_dev": stds}
+    return {"params": params, "scores": values, "stds": stds}
+
+
+def cox(sksurv: SksurvData, n_rep=10, n_spl=5) -> dict[str, list[float]]:
+    splitter: Subsampler = Subsampler.repeated_kfold(
+        n_repeats=n_rep, n_splits=n_spl
+    )
+    scores: list[float] = []
+    for train, test in splitter.split(sksurv.X, sksurv.y):
+        X_train = sksurv.X.iloc[train, :]
+        y_train = sksurv.y[train]
+        model = lm.CoxPHSurvivalAnalysis(alpha=0, n_iter=200)
+
+        try:
+            model.fit(X_train, y_train)
+        except np.linalg.LinAlgError:
+            print(
+                "\nSingular matrix multiplication attempted - "
+                + "skipping results..",
+            )
+            continue
+        score = model.score(sksurv.X.iloc[test, :], sksurv.y[test])
+        scores.append(score)
+    return {"scores": scores}
+
+
+def cox_return_top_model(sksurv: SksurvData, n_rep=10, n_spl=5):
+    splitter: Subsampler = Subsampler.repeated_kfold(
+        n_repeats=n_rep, n_splits=n_spl
+    )
+    scores: list[float] = []
+    top_score = 0
+    top_model = None
+    for train, test in splitter.split(sksurv.X, sksurv.y):
+        X_train = sksurv.X.iloc[train, :]
+        y_train = sksurv.y[train]
+        model = lm.CoxPHSurvivalAnalysis(alpha=0, n_iter=200)
+
+        try:
+            model.fit(X_train, y_train)
+        except np.linalg.LinAlgError:
+            print(
+                "\nSingular matrix multiplication attempted - "
+                + "skipping results..",
+            )
+        score = model.score(sksurv.X.iloc[test, :], sksurv.y[test])
+        if score > top_score:
+            top_score = score
+            top_model = model
+        scores.append(score)
+    return top_model

@@ -31,10 +31,18 @@ class SingleStabilityResult:
 
     """
 
-    def __init__(self, full_result_path: Path):
+    def __init__(
+        self,
+        full_result_path: Path,
+        denominator: str = "all",
+        n_lambdas=100,
+        overwrite_lambda_min: float = 0.0,
+    ):
+        self.denominator = denominator
         _set_plt_params()
         p: Path = PATHS["RESULT_CSV_DATA_PATH"]
         self.fig_path: Path = PATHS["RESULT_FIGURES_DATA_PATH"]
+        self.full_result_path = full_result_path
         self.path: str = (
             str(full_result_path)
             .replace(
@@ -43,6 +51,7 @@ class SingleStabilityResult:
             )
             .replace(".csv", "")
         )
+        self.n_lambdas = n_lambdas
         self.data: pd.DataFrame = pd.read_csv(full_result_path)
         artificial: pd.Series[bool] = self.data["feature"].str.contains(
             "artificial"
@@ -55,31 +64,38 @@ class SingleStabilityResult:
         self.max_lambda = int(
             self.path[nd_start : self.path.index("_results")]  # ignore
         )
+        self.overwrite_lambda_min = overwrite_lambda_min
         self._generate_top_exponent()
         self._generate_top_frequencies()
         self._make_wide_df()
         self._generate_fdr_results()
         self._generate_selected_features()
 
-    def plot_stability_path(self, save: bool = False) -> None:
+    def plot_stability_path(
+        self, save: bool = False, show: bool = False
+    ) -> None:
         """Method that plots stability paths"""
         _, ax = plt.subplots(figsize=(10, 6))
         self.wide_df.plot(ax=ax, legend=False)
         plt.xlabel(r"1 / λ")
-        plt.ylabel(r"frequency (θ)")
+        plt.ylabel(r"$\Pi$")
         if save:
             fig_name: str = self.path + "_stability_path.pdf"
             plt.savefig(
                 self.fig_path / fig_name,
                 bbox_inches="tight",
             )
-        plt.show()
+        if show:
+            plt.show()
 
-    def plot_average_scores(self, save: bool = False) -> None:
+    def plot_average_scores(
+        self, save: bool = False, show: bool = False
+    ) -> None:
         """Method that plots average C-index across bins"""
         assert len(self.data) > 1, "Results dict empty or 1"
-        long_df = self.data
+        long_df: pd.DataFrame = self.data
         sorted_indexes: np.ndarray = np.argsort(long_df["hyperparam"])
+        plt.figure()
         plt.plot(
             long_df["hyperparam"][sorted_indexes],
             long_df["average_score"][sorted_indexes],
@@ -93,9 +109,12 @@ class SingleStabilityResult:
                 self.fig_path / fig_name,
                 bbox_inches="tight",
             )
-        plt.show()
+        if show:
+            plt.show()
 
-    def plot_top_exponent(self, save: bool = False) -> None:
+    def plot_top_exponent(
+        self, save: bool = False, show: bool = False
+    ) -> None:
         """Plots the highest number of exponents which have frequencies
         higher than the highest artificial frequency
 
@@ -103,6 +122,7 @@ class SingleStabilityResult:
             save (bool, optional): saves results in result_figs/.
             Defaults to False.
         """
+        plt.figure()
         plt.plot(self.exponents, self.map_list)
         plt.axvline(
             self.top_exp,
@@ -114,14 +134,17 @@ class SingleStabilityResult:
         plt.ylabel("# non-artificial features")
         plt.legend()
         if save:
-            fig_name = self.path + "_fdr_minimum.pdf"
+            fig_name = self.path + "_top_lambda_exp.pdf"
             plt.savefig(
                 self.fig_path / fig_name,
                 bbox_inches="tight",
             )
-        plt.show()
+        if show:
+            plt.show()
 
-    def plot_top_freq_dist(self, save: bool = False) -> None:
+    def plot_top_freq_dist(
+        self, save: bool = False, show: bool = False
+    ) -> None:
         """Plots all top frequencies for both artificial and non-artificial
         features.
 
@@ -129,11 +152,11 @@ class SingleStabilityResult:
             df (pd.DataFrame): result data fram from stability selection
             best_exp (float): exponent to 10, hyperparameter
         """
-
+        plt.figure()
         sns.scatterplot(
             data=self.top_frequency_df,
             x="index",
-            y="freq",
+            y=r"freq",
             hue="is_artificial",
         )
         if save:
@@ -142,43 +165,54 @@ class SingleStabilityResult:
                 self.fig_path / fig_name,
                 bbox_inches="tight",
             )
-        plt.show()
+        plt.ylabel(r"$\Pi$")
+        if show:
+            plt.show()
 
-    def plot_min_fdr(self, save: bool = False) -> None:
+    def plot_min_fdr(self, save: bool = False, show: bool = False) -> None:
         """Calculates the false discovery rate
         (proxy) and plots agains cutoff to find the
         lowest possible fdr - known as the frequency threshold.
         Saves the frequency treshold as an instance variable.
         """
-        min_fdr = min(self.row_df["fdr"])
+        self.min_fdp = min(self.row_df["fdr"])
+        plt.figure()
         plt.plot(self.row_df["cut"], self.row_df["fdr"])
-        plt.xlabel("cutoff")
-        plt.ylabel("fdr")
+        plt.xlabel(r"$\pi_{thr}$")
+        plt.ylabel(r"$fdp^{+}$")
         plt.axhline(
-            min_fdr,
-            label=f"min fdr: {round(min_fdr, 4)}",
+            self.min_fdp,
+            label=r"$fdp^{+}$" + f"{round(self.min_fdp, 4)}",
             ls=":",
         )
         plt.axvline(
             self.reliability_thresh,
             ls=":",
             c="r",
-            label="reliability thresh:"
-            + f"{round(self.reliability_thresh, 4)}",
+            label=r"$\pi_{thr}^*$: " + f"{round(self.reliability_thresh, 4)}",
         )
         plt.legend()
         if save:
-            fig_name = self.path + "_fdr_minimum.pdf"
+            fig_name = self.path + "_fdp+_minimum.pdf"
             plt.savefig(
                 self.fig_path / fig_name,
                 bbox_inches="tight",
             )
-        plt.show()
+        if show:
+            plt.show()
+
+    def get_min_fdp(self) -> float:
+        return self.min_fdp
+
+    def get_top_exponent(self) -> float:
+        return self.top_exp
 
     def get_reliability_thresh(self) -> float:
         return self.reliability_thresh
 
-    def plot_stability_path_with_thresh(self, save: bool = False) -> None:
+    def plot_stability_path_with_thresh(
+        self, save: bool = False, show: bool = False
+    ) -> None:
         """Plots the stability paths with the frequency cutoff. Colors every
         10th non-chosen features grey.
 
@@ -188,6 +222,12 @@ class SingleStabilityResult:
         """
         arbitrary_number = 200
         _, ax = plt.subplots(figsize=(10, 6))
+        if len(self.selected_features) == 0:
+            logger.error(
+                "No features found, not able to plot stability path"
+                + "with threshold"
+            )
+            return
         plt.axhline(
             self.reliability_thresh,
             label=f"reliability thresh: {round(self.reliability_thresh, 4)}\n"
@@ -204,14 +244,15 @@ class SingleStabilityResult:
         )
         self.wide_df[self.selected_features].plot(ax=ax, legend=False)
         plt.xlabel(r"1 / λ")
-        plt.ylabel(r"frequency (θ)")
+        plt.ylabel(r"$\Pi$")
         if save:
             fig_name: str = self.path + "_stability_path_w_thresh.pdf"
             plt.savefig(
                 self.fig_path / fig_name,
                 bbox_inches="tight",
             )
-        plt.show()
+        if show:
+            plt.show()
 
     def return_stability_path_with_thresh(self, save: bool):
         """Plots the stability paths with the frequency cutoff. Colors every
@@ -255,13 +296,17 @@ class SingleStabilityResult:
     def get_selected_features(self) -> list[str]:
         return self.selected_features
 
+    def get_true_selected_features(self) -> list[str]:
+        return [
+            feat for feat in self.selected_features if "artificial" not in feat
+        ]
+
     def get_top_frequencies(self) -> pd.DataFrame:
         return self.top_frequency_df
 
     def _true_feature_counter(self, exponent: int) -> int:
         """Helper function to count number of non-artificial features
-        above max artificial feature frequency, runs in a loop with
-        exponend iterable.
+        above max artificial feature frequency.
 
         Args:
             exponent (int): l1 exponent
@@ -277,11 +322,12 @@ class SingleStabilityResult:
             selected_rows = filtered_df.query(f"freq > {max_artificial}")[
                 "feature"
             ]
-        except ValueError:
+        except ValueError as e:
+            logger.error(e)
             return 0
         unique_features: set[str] = set(selected_rows)
-        true_features: int = len(unique_features)
-        return true_features
+        amount: int = len(unique_features)
+        return amount
 
     def _generate_top_exponent(self) -> None:
         """Runs upon initialization of plotting object to get data ready for
@@ -290,14 +336,19 @@ class SingleStabilityResult:
         variables exponents, map_list and top_exp.
         """
         self.exponents: np.ndarray = np.linspace(
-            self.min_lambda, self.max_lambda, 100
+            self.min_lambda, self.max_lambda, self.n_lambdas
         )
         self.map_list: list[int] = list(
             map(self._true_feature_counter, self.exponents)
         )
-        self.top_exp: float = self.exponents[
-            self.map_list.index(max(self.map_list))
-        ]
+
+        if self.overwrite_lambda_min != 0.0:
+            top_exp = self.overwrite_lambda_min
+        else:
+            top_exp: float = self.exponents[  # type: ignore[no-redef]
+                self.map_list.index(max(self.map_list))
+            ]
+        self.top_exp = top_exp
 
     def _generate_top_frequencies(self) -> None:
         """Filters out all data from hyperparams below best frequency, gets
@@ -331,18 +382,26 @@ class SingleStabilityResult:
         self.wide_df: pd.DataFrame = wide_df
 
     def _generate_fdr_results(self) -> None:
+        """Function to calculate the false discovery proportion
+        proxy dictionary for later optimization of pi_thresh cutoff
+        """
         rows: list[dict[str, float]] = []
-        for cut in np.linspace(0, 1, 100):
+        for cut in np.linspace(0.1, 0.99, 500):
             df_q: pd.DataFrame = self.top_frequency_df.query(f"freq > {cut}")
-            if len(df_q["feature"]) != 0:
-                fdr: float = (
-                    1
-                    + df_q["feature"]
-                    .str.contains("artificial", case=False, na=False)
+            if self.denominator != "all":
+                denom = (
+                    df_q["feature"]
+                    .str.contains("chr", case=False, na=False)
                     .sum()
-                ) / len(df_q["feature"])
+                )
             else:
-                fdr = 1
+                denom = len(df_q["feature"])
+            fdr: float = (
+                1
+                + df_q["feature"]
+                .str.contains("artificial", case=False, na=False)
+                .sum()
+            ) / max(denom, 1)
             rows.append({"cut": cut, "fdr": fdr})
 
         row_df = pd.DataFrame(rows)

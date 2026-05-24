@@ -36,7 +36,7 @@ def robust_train(
     """
     if model_type == "lasso":
         model = lm.CoxnetSurvivalAnalysis(
-            alphas=[param], n_alphas=1, max_iter=1000
+            alphas=[param], n_alphas=1, max_iter=1000, l1_ratio=1
         )
     elif model_type == "ridge" or model_type == "ph":
         model = lm.CoxPHSurvivalAnalysis(
